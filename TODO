@@ -1,0 +1,8 @@
+# TODO
+
+- autotest
+- reformat with ${:-} and ${:=}
+- further customization
+- condensed format
+- suffix support
+- command line options
