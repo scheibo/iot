@@ -1,8 +1,13 @@
 # TODO
 
-- autotest
+- autotest (use watchr?)
 - reformat with ${:-} and ${:=}
 - further customization
 - condensed format
 - suffix support
 - command line options
+- quiet mode (speeds up, prints output on first fail)
+- timing performance
+- progressbar with instant failing messages
+- indent the fail messages
+- unified diff compare (-u or -c or something?)
