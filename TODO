@@ -11,3 +11,21 @@
 - progressbar with instant failing messages
 - indent the fail messages
 - unified diff compare (-u or -c or something?)
+
+- progname + test_progname
+- progrname + test/test_progname (test_ prefix)
+- progrname + test/{suite1,suite2}/*
+- spec style:
+
+test_contains_correct_stuff(){
+  it "Must contain math"
+  grep $output "math*"
+}
+- ie/ runs programs and instead of using diff uses the command given and compares the output to it?
+- move it to bottom, run depending on $?
+- ideal: just run each function and it does all the work (calls program, redirects output, status
+  code is all that matters)
+- provide hooks to allow it to use variables like PROGNAME and OUTPUTFILE and what not, pass all
+  the stuffs to the function beginning with test_ and use exit status
+
+- types of tests: standard suite, progress bar, quiet, sudden death, etc
