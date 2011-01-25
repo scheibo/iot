@@ -1,0 +1,160 @@
+#!/bin/bash
+
+# Here we try to determine where the root directory of the project we're testing is. We start by defaulting
+# to the current directory - in the most basic case iot will be run from the top level directory. However,
+# in order to provide more of a convience for people using source control, we'll also check if we're in a
+# Mercurial or git repository, using the root of that repository as the root directory for the script.
+# This allows us to call the script anywhere in the project and it will still be able to find the correct files.
+ROOTDIR=`pwd`
+hg root >& '/dev/null' && ROOTDIR=`hg root`
+git rev-parse --show-toplevel >& '/dev/null' && ROOTDIR=`git rev-parse --show-toplevel`
+
+# The testing directory is our private playground for where we're going to be doing all our work. We're
+# going to need to clean it up at the end of our tests. Here we can see a common bash trick of using
+# the PID ($$) of the iot program in order to uniquely differentiate our sandbox directory
+SANDBOX_DIR="/tmp/$0-${$}"
+
+# Next we'll need something to print if the tests are passing or failing (respectively). `passmg` and `failmsg`
+# get passed in the file being tested and the testcount of the file. They both use printf as a way of
+# returning a string, since without the printf bash interprets the string as a command. In keeping with how
+# RSpec prints it's results, our pass and fail messages are quite minimal.
+passmsg() { printf "."; }
+failmsg() { printf "F"; }
+
+# In order to change the terminal colors we're going to use tput as opposed to escape codes (for fun!).
+# We need to be sure to finish with a RESET every time we change the color or else the color will continue
+# to be used for the rest of the output (or at least until it is changed again)
+RED=$(tput setaf 1)
+GREEN=$(tput setaf 2)
+YELLOW=$(tput setaf 3)
+BOLD=$(tput bold)
+RESET=$(tput sgr0)
+
+# There are helper functions for printing passing, warning and failing messages. They simply wrap their
+# input in colors. Notice the conspicious use of `printf` in all of this code without a `\n`.
+ppass() { printf "${GREEN}${1}${RESET}"; }
+pwarn() { printf "${YELLOW}${1}${RESET}"; }
+pfail() { printf "${RED}${1}${RESET}"; }
+
+# Straightforward usage and input methods.
+usage() { printf "USAGE: $0 progname [suite]*\n"; exit 1; }
+error() { printf "ERROR: ${1}"; exit 1; }
+
+# The main logic in the code. The basic idea is that we will want to create a sandbox to perform our tests,
+# execute the program with the given test input, saving the output streams into our sandbox where we will
+# diff them and build up meaninful error messages should they fail.
+dotest() {
+    # The `-p` is probably not necessary since we're only going one level down in the tmp directory, but if you
+    # change the default `SANDBOX_DIR` it's easily to forget to add a `-p` here.
+    mkdir -p "${SANDBOX_DIR}"
+    # The results file is were we're going to build up our results string. This is a bit of a hack, in ruby (or
+    # any other civilized language) we might concatenate a string or add strings to an array and then join them
+    # at the end or some other option. However, I'm unaware of whats possible in this regard in bash, so instead
+    # we're going to use the results file and continue appending our message to it.
+    touch "${SANDBOX_DIR}/results"
+
+    # We keep track of the number of tests we have run for diagnostic reasons. The fail count is useful when
+    # listing the errors that have occured at the end.
+    testcount=0
+    failcount=0
+
+    printf "Started\n"
+    for suite in $@; do
+        # We're going to segregate each test suite into its own sub directory of our sandbox so we don't run into any
+        # conflicts where out output files collide, even though this shouldn't be a huge issue because by the time
+        # the next output file gets generated we already don't care about the previous one.
+        mkdir "${SANDBOX_DIR}/${suite}"
+
+        # Here the naming of the tests is set up. We need a `TEST_IN_DIR` which is where we get the input to feed to
+        # the program, and the `EXPECT_OUT_DIR` which holds the expected output of the code. There is also an
+        # `EXPECT_ERR_DIR` for testing stderr output if that is required. All these directories could point to the
+        # same root testing directory if thats you're cup of tea, simply assign them all to be the same thing.
+
+        # The `TEST_DIR_SUFFIX` and `TEST_DIR_PREFIX` just concatenated with the suite name in order to generate a
+        # testing directory. The default testing directory is of the form `suite_tests`.
+        TEST_DIR_PREFIX=''
+        TEST_DIR_SUFFIX='_tests'
+
+        # `TEST_IN_DIR` is really the most important of the three, as this one determines which tests actually get run.
+        # While an expected output or error file may be missing and it won't make much of a difference, if there is no
+        # input file the test will not be run (for fairly obvious reasons).
+        TEST_IN_DIR="${ROOTDIR}/${TEST_DIR_PREFIX}${suite}${TEST_DIR_SUFFIX}/in"
+        EXPECT_OUT_DIR="${ROOTDIR}/${TEST_DIR_PREFIX}${suite}${TEST_DIR_SUFFIX}/out"
+        EXPECT_ERR_DIR="${ROOTDIR}/${TEST_DIR_PREFIX}${suite}${TEST_DIR_SUFFIX}/err"
+
+        for testfile in `ls $TEST_IN_DIR`; do
+            # Testfiles have an expected naming pattern - they are expected to be of the form `test.NUM.{in,out,err}`,
+            # where num is a useful identifier of the test that is run. We're extracting the `NUM` here into a variable
+            # named `count` by some egrep jiggerypokery (the -o option means 'only', this it only prints exactly was is matched)
+            count=`printf $testfile | egrep -o '[0-9]+'`
+            # TODO: This hard coded mzscheme should be abstracted into a variable which allows use to name which program we want to
+            #       use to run the program. Prompting the user to make the program before we test is unneccessary  since we wouldn't
+            #       have even made it to this point if `PROGNAME` wasn't a file.
+            mzscheme $PROGNAME < "${TEST_IN_DIR}/test.${count}.in" > "${SUITE_SANDBOX_DIR}/actual.${count}.out" 2>"${SUITE_SANDBOX_DIR}/actual.${count}.err"
+
+            # Since we need to possibly compare both stdout and stderr to what was expect
+            expectfile="${SUITE_SANBOX_DIR}/test.${count}.combined.expect"
+            resultfile="${SUITE_SANDBOX_DIR}/test.${count}.combined.result"
+
+            [[ -e "${EXPECT_OUT_DIR}/test.${count}.out" ]] && cat "${EXPECT_OUT_DIR}/test.${count}.out" >> "${expectfile}"
+            [[ -e "${EXPECT_ERR_DIR}/test.${count}.out" ]] && cat "${EXPECT_ERR_DIR}/test.${count}.err" >> "${expectfile}"
+
+            [[ -e "${SUITE_SANDBOX_DIR}/test.${count}.out" ]] && cat "${SUITE_SANBOX_DIR}/actual.${count}.out" >> "${resultfile}"
+            [[ -e "${SUITE_SANDBOX_DIR}/test.${count}.out" ]] && cat "${SUITE_SANDBOX_DIR}/actual.${count}.err" >> "${resultfile}"
+
+            diff $expectfile $resultfile >& /dev/null
+
+            if [ $? -eq 0 ]; then
+                ppass `passmsg $testfile $count`
+            else
+                pfail `failmsg $testfile $count`
+                failcount=`expr $failcount + 1`
+
+                # build up a nice message to display at the end
+
+                printf "\n  ${failcount}) ${red}${TESTDIR}/${testfile}${reset}\n" >> "${OUTPUTDIR}/results"
+
+                #diff "${EXPECTDIR}/test.${count}.out" "${OUTPUTDIR}/test.${count}.out" >> "${OUTPUTDIR}/results"
+
+                # diff seems to be too coarse, instead we can use a custom message (maybe include xxd?)
+                pwarn "  ${bold}Expected:\n" >> "${OUTPUTDIR}/results"
+                pwarn "  stdout:\n" >> "${OUTPUTDIR}/results"
+                xxd "${EXPECTDIR}/test.${count}.out" >> "${OUTPUTDIR}/results"
+                if [ -e "${EXPECTERRDIR}/test.${count}.err" ]; then
+                    pwarn "  stderr:\n" >> "${OUTPUTDIR}/results"
+                    cat "${EXPECTERRDIR}/test.${count}.err" >> "${OUTPUTDIR}/results"
+                fi
+                pwarn "\n  ${bold}Received:\n" >> "${OUTPUTDIR}/results"
+                pwarn "  stdout:\n" >> "${OUTPUTDIR}/results"
+                xxd "${OUTPUTDIR}/test.${count}.out" >> "${OUTPUTDIR}/results"
+                if [ -e "${EXPECTERRDIR}/test.${count}.err" ]; then
+                    pwarn "  stderr:\n" >> "${OUTPUTDIR}/results"
+                    cat "${OUTPUTDIR}/test.${count}.err" >> "${OUTPUTDIR}/results"
+                fi
+            fi
+            testcount=`expr $testcount + 1`
+        done
+    done
+    printf "\nFinished\n"
+    cat "${OUTPUTDIR}/results"
+
+    if [ $failcount -eq 0 ]; then
+        ppass "\n\n${testcount} tests, ${failcount} failures\n"
+    else
+        pfail "\n\n${testcount} tests, ${failcount} failures\n"
+    fi
+
+    # clean up
+    rm -r $OUTPUTDIR
+
+    exit $failcount
+}
+
+# Main option processing. The first argument to iot is the test file and the rest of the options denote suites
+# to run. However, we need to take into account the special case where we are given just a program name - in
+# this case we don't want to shift since that name also needs to be passed in order to name  the suite to run.
+[[ -f "${ROOTDIR}/${1}" ]] || usage
+PROGNAME="${ROOTDIR}/${1}"
+[[ $# -eq 1 ]] || shift
+
+dotest $@
