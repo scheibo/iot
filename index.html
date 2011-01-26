@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
+    <title>iot</title>
+    <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
+</head>
+<body>
+<div id=container>
+    <div id=background></div>
+    <table cellspacing=0 cellpadding=0>
+    <thead>
+      <tr>
+        <th class=docs><h1>iot</h1></th>
+        <th class=code></th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr><td class='docs'><p>Here we try to determine where the root directory of the project we're testing is. We start by defaulting
+to the current directory - in the most basic case iot will be run from the top level directory. However,
+in order to provide more of a convience for people using source control, we'll also check if we're in a
+Mercurial or git repository, using the root of that repository as the root directory for the script.
+This allows us to call the script anywhere in the project and it will still be able to find the correct files.</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="c">#!/bin/bash</span>
+
+<span class="nv">ROOTDIR</span><span class="o">=</span><span class="sb">`</span><span class="nb">pwd</span><span class="sb">`</span>
+hg root &gt;&amp; <span class="s1">&#39;/dev/null&#39;</span> <span class="o">&amp;&amp;</span> <span class="nv">ROOTDIR</span><span class="o">=</span><span class="sb">`</span>hg root<span class="sb">`</span>
+git rev-parse --show-toplevel &gt;&amp; <span class="s1">&#39;/dev/null&#39;</span> <span class="o">&amp;&amp;</span> <span class="nv">ROOTDIR</span><span class="o">=</span><span class="sb">`</span>git rev-parse --show-toplevel<span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>The testing directory is our private playground for where we're going to be doing all our work. We're
+going to need to clean it up at the end of our tests. Here we can see a common bash trick of using
+the PID ($$) of the iot program in order to uniquely differentiate our sandbox directory</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SANDBOX_DIR</span><span class="o">=</span><span class="s2">&quot;/tmp/$0-${$}&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Next we'll need something to print if the tests are passing or failing (respectively). <code>passmg</code> and <code>failmsg</code>
+get passed in the file being tested and the testcount of the file. They both use printf as a way of
+returning a string, since without the printf bash interprets the string as a command. In keeping with how
+RSpec prints it's results, our pass and fail messages are quite minimal.</p>
+
+</td><td class=code><div class=highlight><pre>
+passmsg<span class="o">()</span> <span class="o">{</span> <span class="nb">printf</span> <span class="s2">&quot;.&quot;</span>; <span class="o">}</span>
+failmsg<span class="o">()</span> <span class="o">{</span> <span class="nb">printf</span> <span class="s2">&quot;F&quot;</span>; <span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>In order to change the terminal colors we're going to use tput as opposed to escape codes (for fun!).
+We need to be sure to finish with a RESET every time we change the color or else the color will continue
+to be used for the rest of the output (or at least until it is changed again)</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">RED</span><span class="o">=</span><span class="k">$(</span>tput setaf 1<span class="k">)</span>
+<span class="nv">GREEN</span><span class="o">=</span><span class="k">$(</span>tput setaf 2<span class="k">)</span>
+<span class="nv">YELLOW</span><span class="o">=</span><span class="k">$(</span>tput setaf 3<span class="k">)</span>
+<span class="nv">BOLD</span><span class="o">=</span><span class="k">$(</span>tput bold<span class="k">)</span>
+<span class="nv">RESET</span><span class="o">=</span><span class="k">$(</span>tput sgr0<span class="k">)</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>There are helper functions for printing passing, warning and failing messages. They simply wrap their
+input in colors. Notice the conspicious use of <code>printf</code> in all of this code without a <code>\n</code>.</p>
+
+</td><td class=code><div class=highlight><pre>
+ppass<span class="o">()</span> <span class="o">{</span> <span class="nb">printf</span> <span class="s2">&quot;${GREEN}${1}${RESET}&quot;</span>; <span class="o">}</span>
+pwarn<span class="o">()</span> <span class="o">{</span> <span class="nb">printf</span> <span class="s2">&quot;${YELLOW}${1}${RESET}&quot;</span>; <span class="o">}</span>
+pfail<span class="o">()</span> <span class="o">{</span> <span class="nb">printf</span> <span class="s2">&quot;${RED}${1}${RESET}&quot;</span>; <span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Straightforward usage and input methods.</p>
+
+</td><td class=code><div class=highlight><pre>
+usage<span class="o">()</span> <span class="o">{</span> <span class="nb">printf</span> <span class="s2">&quot;USAGE: $0 progname [suite]*\n&quot;</span>; <span class="nb">exit </span>1; <span class="o">}</span>
+error<span class="o">()</span> <span class="o">{</span> <span class="nb">printf</span> <span class="s2">&quot;ERROR: ${1}&quot;</span>; <span class="nb">exit </span>1; <span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>The main logic in the code. The basic idea is that we will want to create a sandbox to perform our tests,
+execute the program with the given test input, saving the output streams into our sandbox where we will
+diff them and build up meaninful error messages should they fail.</p>
+
+</td><td class=code><div class=highlight><pre>
+dotest<span class="o">()</span> <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>The <code>-p</code> is probably not necessary since we're only going one level down in the tmp directory, but if you
+change the default <code>SANDBOX_DIR</code> it's easily to forget to add a <code>-p</code> here.</p>
+
+</td><td class=code><div class=highlight><pre>
+    mkdir -p <span class="s2">&quot;${SANDBOX_DIR}&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>The results file is were we're going to build up our results string. This is a bit of a hack, in ruby (or
+any other civilized language) we might concatenate a string or add strings to an array and then join them
+at the end or some other option. However, I'm unaware of whats possible in this regard in bash, so instead
+we're going to use the results file and continue appending our message to it.</p>
+
+</td><td class=code><div class=highlight><pre>
+    touch <span class="s2">&quot;${SANDBOX_DIR}/results&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>We keep track of the number of tests we have run for diagnostic reasons. The fail count is useful when
+listing the errors that have occured at the end.</p>
+
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">testcount</span><span class="o">=</span>0
+    <span class="nv">failcount</span><span class="o">=</span>0
+
+    <span class="nb">printf</span> <span class="s2">&quot;Started\n&quot;</span>
+    <span class="k">for </span>suite in <span class="nv">$@</span>; <span class="k">do</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>We're going to segregate each test suite into its own sub directory of our sandbox so we don't run into any
+conflicts where out output files collide, even though this shouldn't be a huge issue because by the time
+the next output file gets generated we already don't care about the previous one.</p>
+
+</td><td class=code><div class=highlight><pre>
+        mkdir <span class="s2">&quot;${SANDBOX_DIR}/${suite}&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Here the naming of the tests is set up. We need a <code>TEST_IN_DIR</code> which is where we get the input to feed to
+the program, and the <code>EXPECT_OUT_DIR</code> which holds the expected output of the code. There is also an
+<code>EXPECT_ERR_DIR</code> for testing stderr output if that is required. All these directories could point to the
+same root testing directory if thats you're cup of tea, simply assign them all to be the same thing.</p>
+
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>The <code>TEST_DIR_SUFFIX</code> and <code>TEST_DIR_PREFIX</code> just concatenated with the suite name in order to generate a
+testing directory. The default testing directory is of the form <code>suite_tests</code>.</p>
+
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">TEST_DIR_PREFIX</span><span class="o">=</span><span class="s1">&#39;&#39;</span>
+        <span class="nv">TEST_DIR_SUFFIX</span><span class="o">=</span><span class="s1">&#39;_tests&#39;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p><code>TEST_IN_DIR</code> is really the most important of the three, as this one determines which tests actually get run.
+While an expected output or error file may be missing and it won't make much of a difference, if there is no
+input file the test will not be run (for fairly obvious reasons).</p>
+
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">TEST_IN_DIR</span><span class="o">=</span><span class="s2">&quot;${ROOTDIR}/${TEST_DIR_PREFIX}${suite}${TEST_DIR_SUFFIX}/in&quot;</span>
+        <span class="nv">EXPECT_OUT_DIR</span><span class="o">=</span><span class="s2">&quot;${ROOTDIR}/${TEST_DIR_PREFIX}${suite}${TEST_DIR_SUFFIX}/out&quot;</span>
+        <span class="nv">EXPECT_ERR_DIR</span><span class="o">=</span><span class="s2">&quot;${ROOTDIR}/${TEST_DIR_PREFIX}${suite}${TEST_DIR_SUFFIX}/err&quot;</span>
+
+        <span class="k">for </span>testfile in <span class="sb">`</span>ls <span class="nv">$TEST_IN_DIR</span><span class="sb">`</span>; <span class="k">do</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Testfiles have an expected naming pattern - they are expected to be of the form <code>test.NUM.{in,out,err}</code>,
+where num is a useful identifier of the test that is run. We're extracting the <code>NUM</code> here into a variable
+named <code>count</code> by some egrep jiggerypokery (the -o option means 'only', this it only prints exactly was is matched)</p>
+
+</td><td class=code><div class=highlight><pre>
+            <span class="nv">count</span><span class="o">=</span><span class="sb">`</span><span class="nb">printf</span> <span class="nv">$testfile</span> | egrep -o <span class="s1">&#39;[0-9]+&#39;</span><span class="sb">`</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>TODO: This hard coded mzscheme should be abstracted into a variable which allows use to name which program we want to
+      use to run the program. Prompting the user to make the program before we test is unneccessary  since we wouldn't
+      have even made it to this point if <code>PROGNAME</code> wasn't a file.</p>
+
+</td><td class=code><div class=highlight><pre>
+            mzscheme <span class="nv">$PROGNAME</span> &lt; <span class="s2">&quot;${TEST_IN_DIR}/test.${count}.in&quot;</span> &gt; <span class="s2">&quot;${SUITE_SANDBOX_DIR}/actual.${count}.out&quot;</span> 2&gt;<span class="s2">&quot;${SUITE_SANDBOX_DIR}/actual.${count}.err&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Since we need to possibly compare both stdout and stderr to what was expect</p>
+
+</td><td class=code><div class=highlight><pre>
+            <span class="nv">expectfile</span><span class="o">=</span><span class="s2">&quot;${SUITE_SANBOX_DIR}/test.${count}.combined.expect&quot;</span>
+            <span class="nv">resultfile</span><span class="o">=</span><span class="s2">&quot;${SUITE_SANDBOX_DIR}/test.${count}.combined.result&quot;</span>
+
+            <span class="o">[[</span> -e <span class="s2">&quot;${EXPECT_OUT_DIR}/test.${count}.out&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> cat <span class="s2">&quot;${EXPECT_OUT_DIR}/test.${count}.out&quot;</span> &gt;&gt; <span class="s2">&quot;${expectfile}&quot;</span>
+            <span class="o">[[</span> -e <span class="s2">&quot;${EXPECT_ERR_DIR}/test.${count}.out&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> cat <span class="s2">&quot;${EXPECT_ERR_DIR}/test.${count}.err&quot;</span> &gt;&gt; <span class="s2">&quot;${expectfile}&quot;</span>
+
+            <span class="o">[[</span> -e <span class="s2">&quot;${SUITE_SANDBOX_DIR}/test.${count}.out&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> cat <span class="s2">&quot;${SUITE_SANBOX_DIR}/actual.${count}.out&quot;</span> &gt;&gt; <span class="s2">&quot;${resultfile}&quot;</span>
+            <span class="o">[[</span> -e <span class="s2">&quot;${SUITE_SANDBOX_DIR}/test.${count}.out&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> cat <span class="s2">&quot;${SUITE_SANDBOX_DIR}/actual.${count}.err&quot;</span> &gt;&gt; <span class="s2">&quot;${resultfile}&quot;</span>
+
+            diff <span class="nv">$expectfile</span> <span class="nv">$resultfile</span> &gt;&amp; /dev/null
+
+            <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> -eq 0 <span class="o">]</span>; <span class="k">then</span>
+<span class="k">                </span>ppass <span class="sb">`</span>passmsg <span class="nv">$testfile</span> <span class="nv">$count</span><span class="sb">`</span>
+            <span class="k">else</span>
+<span class="k">                </span>pfail <span class="sb">`</span>failmsg <span class="nv">$testfile</span> <span class="nv">$count</span><span class="sb">`</span>
+                <span class="nv">failcount</span><span class="o">=</span><span class="sb">`</span>expr <span class="nv">$failcount</span> + 1<span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>build up a nice message to display at the end</p>
+
+</td><td class=code><div class=highlight><pre>
+
+                <span class="nb">printf</span> <span class="s2">&quot;\n  ${failcount}) ${red}${TESTDIR}/${testfile}${reset}\n&quot;</span> &gt;&gt; <span class="s2">&quot;${OUTPUTDIR}/results&quot;</span>
+
+                <span class="c">#diff &quot;${EXPECTDIR}/test.${count}.out&quot; &quot;${OUTPUTDIR}/test.${count}.out&quot; &gt;&gt; &quot;${OUTPUTDIR}/results&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>diff seems to be too coarse, instead we can use a custom message (maybe include xxd?)</p>
+
+</td><td class=code><div class=highlight><pre>
+                pwarn <span class="s2">&quot;  ${bold}Expected:\n&quot;</span> &gt;&gt; <span class="s2">&quot;${OUTPUTDIR}/results&quot;</span>
+                pwarn <span class="s2">&quot;  stdout:\n&quot;</span> &gt;&gt; <span class="s2">&quot;${OUTPUTDIR}/results&quot;</span>
+                xxd <span class="s2">&quot;${EXPECTDIR}/test.${count}.out&quot;</span> &gt;&gt; <span class="s2">&quot;${OUTPUTDIR}/results&quot;</span>
+                <span class="k">if</span> <span class="o">[</span> -e <span class="s2">&quot;${EXPECTERRDIR}/test.${count}.err&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">                    </span>pwarn <span class="s2">&quot;  stderr:\n&quot;</span> &gt;&gt; <span class="s2">&quot;${OUTPUTDIR}/results&quot;</span>
+                    cat <span class="s2">&quot;${EXPECTERRDIR}/test.${count}.err&quot;</span> &gt;&gt; <span class="s2">&quot;${OUTPUTDIR}/results&quot;</span>
+                <span class="k">fi</span>
+<span class="k">                </span>pwarn <span class="s2">&quot;\n  ${bold}Received:\n&quot;</span> &gt;&gt; <span class="s2">&quot;${OUTPUTDIR}/results&quot;</span>
+                pwarn <span class="s2">&quot;  stdout:\n&quot;</span> &gt;&gt; <span class="s2">&quot;${OUTPUTDIR}/results&quot;</span>
+                xxd <span class="s2">&quot;${OUTPUTDIR}/test.${count}.out&quot;</span> &gt;&gt; <span class="s2">&quot;${OUTPUTDIR}/results&quot;</span>
+                <span class="k">if</span> <span class="o">[</span> -e <span class="s2">&quot;${EXPECTERRDIR}/test.${count}.err&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">                    </span>pwarn <span class="s2">&quot;  stderr:\n&quot;</span> &gt;&gt; <span class="s2">&quot;${OUTPUTDIR}/results&quot;</span>
+                    cat <span class="s2">&quot;${OUTPUTDIR}/test.${count}.err&quot;</span> &gt;&gt; <span class="s2">&quot;${OUTPUTDIR}/results&quot;</span>
+                <span class="k">fi</span>
+<span class="k">            fi</span>
+<span class="k">            </span><span class="nv">testcount</span><span class="o">=</span><span class="sb">`</span>expr <span class="nv">$testcount</span> + 1<span class="sb">`</span>
+        <span class="k">done</span>
+<span class="k">    done</span>
+<span class="k">    </span><span class="nb">printf</span> <span class="s2">&quot;\nFinished\n&quot;</span>
+    cat <span class="s2">&quot;${OUTPUTDIR}/results&quot;</span>
+
+    <span class="k">if</span> <span class="o">[</span> <span class="nv">$failcount</span> -eq 0 <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>ppass <span class="s2">&quot;\n\n${testcount} tests, ${failcount} failures\n&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span>pfail <span class="s2">&quot;\n\n${testcount} tests, ${failcount} failures\n&quot;</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>clean up</p>
+
+</td><td class=code><div class=highlight><pre>
+    rm -r <span class="nv">$OUTPUTDIR</span>
+
+    <span class="nb">exit</span> <span class="nv">$failcount</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Main option processing. The first argument to iot is the test file and the rest of the options denote suites
+to run. However, we need to take into account the special case where we are given just a program name - in
+this case we don't want to shift since that name also needs to be passed in order to name  the suite to run.</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="o">[[</span> -f <span class="s2">&quot;${ROOTDIR}/${1}&quot;</span> <span class="o">]]</span> <span class="o">||</span> usage
+<span class="nv">PROGNAME</span><span class="o">=</span><span class="s2">&quot;${ROOTDIR}/${1}&quot;</span>
+<span class="o">[[</span> <span class="nv">$# </span>-eq 1 <span class="o">]]</span> <span class="o">||</span> <span class="nb">shift</span>
+
+dotest <span class="nv">$@</span>
+
+
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
+
+</pre></div></td></tr><tr><td class=docs>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs></td><td class='code'></td></tr>
+    </tbody>
+    </table>
+</div>
+</body>
+</html>
