@@ -1,9 +1,5 @@
 # iot
 
-input/output tests
-
-## Overview
-
 `iot` serves as a testing 'suite' for the times when you only care that given a certain input, a certain output is produced. `iot` tries to be a simple solution to creating and managing
  test suites in this limited environment.
 
