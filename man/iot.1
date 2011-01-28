@@ -1,0 +1,90 @@
+.\" generated with Ronn/v0.7.3
+.\" http://github.com/rtomayko/ronn/tree/0.7.3
+.
+.TH "IOT" "1" "January 2011" "SCHEIBO" "iot Manual"
+.
+.SH "NAME"
+\fBiot\fR \- input output test
+.
+.SH "SYNOPSIS"
+\fBname\fR [\fIoptional\fR\.\.\.] \fIflags\fR
+.
+.SH "DESCRIPTION"
+A normal paragraph\. This can span multiple lines and is terminated with two or more line endings \-\- just like Markdown\.
+.
+.P
+Inline markup for \fBcode\fR, \fBuser input\fR, and \fBstrong\fR are displayed boldface; \fIvariable\fR, \fIemphasis\fR, \fIemphasis\fR, are displayed in italics (HTML) or underline (roff)\.
+.
+.P
+Manual references like sh(1), markdown(7), roff(7), etc\. are hyperlinked in HTML output\.
+.
+.P
+Link to sections like [STANDARDS][], [SEE ALSO][], or [WITH A DIFFERENT LINK TEXT][#SEE\-ALSO]\.
+.
+.P
+Definition lists:
+.
+.TP
+\fB\-a\fR, \fB\-\-argument\fR=[\fIvalue\fR]
+One or more paragraphs describing the argument\.
+.
+.TP
+You can put whatever you \fIwant\fR here, really
+Nesting and paragraph spacing are respected\.
+.
+.P
+Frequently used sections:
+.
+.SH "OPTIONS"
+.
+.TP
+\fB\-b\fR \fIfile\fR
+True if \fIfile\fR exists and is a block special file\.
+.
+.TP
+\fB\-c\fR \fIfile\fR
+True if \fIfile\fR exists and is a character special file\.
+.
+.TP
+\fB\-d\fR \fIfile\fR
+True if file exists and is a directory\.
+.
+.SH "SYNTAX"
+.
+.SH "ENVIRONMENT_VARIABLES"
+.
+.TP
+\fBRONN_MANUAL\fR
+A default manual name to be displayed in the top\-center header area\. The \fB\-\-manual\fR option takes precedence over this value\.
+.
+.TP
+\fBRONN_ORGANIZATION\fR
+The default manual publishing group, organization, or individual to be displayed in the bottom\-left footer area\. The \fB\-\-organization\fR option takes precedence over this value\.
+.
+.TP
+\fBRONN_DATE\fR
+The default manual date in \fBYYYY\-MM\-DD\fR format\. Displayed in the bottom\-center footer area\. The \fB\-\-date\fR option takes precedence over this value\.
+.
+.TP
+\fBRONN_STYLE\fR
+A \fBPATH\fR\-style list of directories to check for stylesheets given to the \fB\-\-style\fR option\. Directories are separated by a \fI:\fR; blank entries are ignored\. Use \fI\.\fR to include the current working directory\.
+.
+.TP
+\fBMANPAGER\fR
+The paging program used for man pages\. This is typically set to something like \'less \-is\'\.
+.
+.TP
+\fBPAGER\fR
+Used instead of \fBMANPAGER\fR when \fBMANPAGER\fR is not defined\.
+.
+.SH "RETURN VALUES"
+failcount
+.
+.SH "SECURITY CONSIDERATIONS"
+eval
+.
+.SH "BUGS"
+Please open up an issue on Github if you find a bug\. Patches are always welcome\.
+.
+.SH "COPYRIGHT"
+\fBiot\fR is Copyright (C) 2011 Kirk Scheibelhut http://scheibo\.com/about

@@ -1,0 +1,88 @@
+iot(1) -- input output test
+===========================
+
+## SYNOPSIS
+
+`name` [<optional>...] <flags>
+
+## DESCRIPTION
+
+A normal paragraph. This can span multiple lines and is terminated with two
+or more line endings -- just like Markdown.
+
+Inline markup for `code`, `user input`, and **strong** are displayed
+boldface; <variable>, _emphasis_, *emphasis*, are displayed in italics
+(HTML) or underline (roff).
+
+Manual references like sh(1), markdown(7), roff(7), etc. are hyperlinked in
+HTML output.
+
+Link to sections like [STANDARDS][], [SEE ALSO][], or [WITH A DIFFERENT LINK
+TEXT][#SEE-ALSO].
+
+Definition lists:
+
+ * `-a`, `--argument`=[<value>]:
+   One or more paragraphs describing the argument.
+
+ * You can put whatever you *want* here, really:
+   Nesting and paragraph spacing are respected.
+
+Frequently used sections:
+
+## OPTIONS
+
+* `-b` <file>:
+  True if <file> exists and is a block special file.
+
+* `-c` <file>:
+  True if _file_ exists and is a character special file.
+
+* `-d` <file>:
+  True if file exists and is a directory.
+
+## SYNTAX
+
+## ENVIRONMENT_VARIABLES
+
+* `RONN_MANUAL`:
+  A default manual name to be displayed in the top-center header area.
+  The `--manual` option takes precedence over this value.
+
+* `RONN_ORGANIZATION`:
+  The default manual publishing group, organization, or individual to be
+  displayed in the bottom-left footer area. The `--organization` option takes
+  precedence over this value.
+
+* `RONN_DATE`:
+  The default manual date in `YYYY-MM-DD` format. Displayed in the
+  bottom-center footer area. The `--date` option takes precedence over this
+  value.
+
+* `RONN_STYLE`:
+  A `PATH`-style list of directories to check for stylesheets given to the
+  `--style` option. Directories are separated by a _:_; blank entries are
+  ignored. Use _._ to include the current working directory.
+
+* `MANPAGER`:
+  The paging program used for man pages. This is typically set to
+  something like 'less -is'.
+
+* `PAGER`:
+  Used instead of `MANPAGER` when `MANPAGER` is not defined.
+
+## RETURN VALUES
+
+failcount
+
+## SECURITY CONSIDERATIONS
+
+eval
+
+## BUGS
+
+Please open up an issue on Github if you find a bug. Patches are always welcome.
+
+## COPYRIGHT
+
+`iot` is Copyright (C) 2011 Kirk Scheibelhut http://scheibo.com/about
