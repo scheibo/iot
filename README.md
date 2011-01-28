@@ -35,7 +35,7 @@ Runs the given program with all the input file for the given test and compares t
 
 	$ iot program.ss --command='mzscheme' suite-1 suite-2
 
-Runs `program.ss` with a custom command (as opposed to just `./program.ss`) on two test suites. These test suites contain groups of input/output (and/or error) files which are testing fed to `program.ss` in turn and checked for failure conditions.
+Runs 'program.ss' with a custom command (as opposed to just './program.ss') on two test suites. These test suites contain groups of input/output (and/or error) files which are testing fed to 'program.ss' in turn and checked for failure conditions.
 
 Some sample output:
 
@@ -51,12 +51,12 @@ Or for failing cases:
 	....F......
 	Finished
 
-	1) list_suite/in/test_list.in
-	Expected:
-	apple, orange, banana
+		1) list_suite/in/test_list.in
+		Expected:
+		apple, orange, banana
 
-	Received:
-	banana, banana, banana
+		Received:
+		banana, banana, banana
 
 	11 tests, 1 failures
 
@@ -81,7 +81,7 @@ Matchers form the other half of the custom test matcher system. A matcher is the
 	├── suite2
 	└── suite3
 
-This file get sourced in `iot` and is available to all of the test suites. Alternatively, each test matcher can belong in its own file named by `prefix`matcher, where prefix is described above. Hence we could put our `error_check` matcher in a file named `error_check_matcher` _or_ `error_check.matcher`. These individual matcher files should also be in the top level `test` directory. One final alternative is to specify the matcher file to use through the `--matcher` option on the command line.
+This file get sourced in `iot` and is available to all of the test suites. Alternatively, each test matcher can belong in its own file named by '`prefix`'matcher, where prefix is described above. Hence we could put our `error_check` matcher in a file named `error_check_matcher` _or_ `error_check.matcher`. These individual matcher files should also be in the top level `test` directory. One final alternative is to specify the matcher file to use through the `--matcher` option on the command line.
 
 Inside of a matcher file should be a function named `prefix`matcher (where only the `prefix_` form is a allowed, since it is a function) which takes in a couple of arguments: `$result_output`, `$result_err`, `$expected_output`, `$expected_err`; where all of the previous arguments are paths which name the specific (possibly non-existent) files. The `$expected_output` and `$expected_err` files would be non-existent if they were not provided in the suites -- some matchers don't require these files. The matcher function need simply return a non-zero exit code to signal that the test has failed. Coming back to our error example from above:
 
