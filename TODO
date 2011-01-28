@@ -1,14 +1,13 @@
 # TODO
 
-- autotest (use watchr?)
 - reformat with ${:-} and ${:=}
 - further customization
 - condensed format
 - suffix support
 - command line options
 - quiet mode (speeds up, prints output on first fail)
-- timing performance
-- progressbar with instant failing messages
+
+
 - indent the fail messages
 - unified diff compare (-u or -c or something?)
 
@@ -21,6 +20,7 @@ test_contains_correct_stuff(){
   it "Must contain math"
   grep $output "math*"
 }
+
 - ie/ runs programs and instead of using diff uses the command given and compares the output to it?
 - move it to bottom, run depending on $?
 - ideal: just run each function and it does all the work (calls program, redirects output, status
@@ -29,3 +29,21 @@ test_contains_correct_stuff(){
   the stuffs to the function beginning with test_ and use exit status
 
 - types of tests: standard suite, progress bar, quiet, sudden death, etc
+
+## MATCHERS
+
+Matchers form the other half of the custom test matcher system. A matcher is the actual function which determines whether the result output (and/or error) should be considered as 'passing'. `iot` looks for an `iot_matcher` or `test_matcher` shell file at the root of the test directory and the root of every test suite directory. i.e.
+
+	test
+	├── test_matcher
+	├── suite1
+	│   ├── test_matcher
+	│   ├── in
+	│   ├── out
+	│   └── error
+	├── suite2
+	└── suite3
+
+These files get sourced in `iot` and our scoped in a pseudo-hierarchal fashion: hence the top level `test_matcher` provides matchers for every test suite while `suite1/test_matcher` is available only to the tests inside `suite1`. Alternatively, each test matcher can belong in its own file named by `prefix`matcher, where prefix is described above. Hence we could put our `error_check` matcher in a file named `error_check_matcher` _or_ `error_check.matcher`. These should also be in the top level `test` or in the individual `suite` directories, depending on scoping
+
+-- should unsource? to get proper scoping?
