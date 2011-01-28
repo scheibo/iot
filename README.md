@@ -7,7 +7,7 @@ The basic idea behind `iot` is that it runs a given program and saves the output
 
 The source file for `iot` aims to be easy to edit, so feel free to fork and change the project so that it suits you better.
 
- * see the manpage [ronn.1](http://scheibo.github.com/iot/iot.1.html)
+ * see the manpage [iot.1](http://scheibo.github.com/iot/iot.1.html)
  * view the annotated [source](http://scheibo.github.com/iot)
 
 ## Installation
