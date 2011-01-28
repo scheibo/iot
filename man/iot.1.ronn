@@ -3,85 +3,96 @@ iot(1) -- input output test
 
 ## SYNOPSIS
 
-`name` [<optional>...] <flags>
+`iot` <program> <test>...<br>
+`iot` <program> <suite>...<br>
 
 ## DESCRIPTION
 
-A normal paragraph. This can span multiple lines and is terminated with two
-or more line endings -- just like Markdown.
+`iot` serves as a testing 'suite' for the times when you only care that given a certain input, a certain output is produced. `iot` tries to be a simple solution to creating and managing
+ test suites in this limited environment.
 
-Inline markup for `code`, `user input`, and **strong** are displayed
-boldface; <variable>, _emphasis_, *emphasis*, are displayed in italics
-(HTML) or underline (roff).
+The basic idea behind `iot` is that it runs a given program and saves the output (and error) streams, comparing them to the expected output (and error). `iot` can handle running entire suites of such tests (i.e. directories on input files), or simply individual tests. One powerful feature that `iot` has is the ability to accept custom matchers for dealing with the output of tests. See the 'Custom Test Matchers' section below for more information.
 
-Manual references like sh(1), markdown(7), roff(7), etc. are hyperlinked in
-HTML output.
 
-Link to sections like [STANDARDS][], [SEE ALSO][], or [WITH A DIFFERENT LINK
-TEXT][#SEE-ALSO].
+* view the [README](https://github.com/scheibo/iot#readme).
+* view the annotated [source](http://scheibo.github.com/iot).
 
-Definition lists:
 
- * `-a`, `--argument`=[<value>]:
-   One or more paragraphs describing the argument.
+## USAGE
 
- * You can put whatever you *want* here, really:
-   Nesting and paragraph spacing are respected.
+Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 
-Frequently used sections:
+Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 
 ## OPTIONS
 
-* `-b` <file>:
-  True if <file> exists and is a block special file.
+The following elements specify directory or file preferences. These values can also be
+set by via the [ENVIRONMENT][].
 
-* `-c` <file>:
-  True if _file_ exists and is a character special file.
+* `-r`, `--rootdir`,`--rootdir`=<directory>:
+  The directory which contains the top level 'test' directory.
 
-* `-d` <file>:
-  True if file exists and is a directory.
+* `-t` <directory>, `--tempdir` <directory>, `--tempdir`=<directory>, `-s` <directory>, `--sandboxdir` <directory>, `--sandboxdir`=<directory>:
+  The directory to store all of `iot`'s temporary files.
 
-## SYNTAX
+* `-c` <file>, `--command` <file>, `--command`=<file>:
+  Use the given command to execute the <program> which is being tested
+  as opposed to running it with `./program`
+
+* `-m`, `--matcher` <file>:
+  Path to a custom [matcher][CUSTOM MATCHERS] file.
+
+Various different mode options can also be specified:
+
+* `-i`, `--immeadiate`:
+  Immediately print diagnostic information regarding each failed test
+  as opposed to waiting until all the tests have been run.
+
+* `-x`, `--sudden-death`:
+	Stop testing after the first failed test. Immediately exit and print
+	information regarding the failed test case.
+
+* `-q`, `--quiet`:
+  Don't print any output, just return an exit code signaling pass or fail.
 
 ## ENVIRONMENT_VARIABLES
 
-* `RONN_MANUAL`:
-  A default manual name to be displayed in the top-center header area.
-  The `--manual` option takes precedence over this value.
+* `ROOTDIR`:
+  The directory which contains the top level 'test' directory.
+	The `--rootdir` option takes precedence over this value.
 
-* `RONN_ORGANIZATION`:
-  The default manual publishing group, organization, or individual to be
-  displayed in the bottom-left footer area. The `--organization` option takes
-  precedence over this value.
+* `SANDBOXDIR`:
+  The directory which contains the top level 'test' directory.
+  The `--sandboxdir` option takes precedence over this value.
 
-* `RONN_DATE`:
-  The default manual date in `YYYY-MM-DD` format. Displayed in the
-  bottom-center footer area. The `--date` option takes precedence over this
-  value.
+* `COMMAND`:
+	Use the given command to execute the <program> which is being tested
+	as opposed to running it with `./program`. The `--command` option takes
+	precedence over this value.
 
-* `RONN_STYLE`:
-  A `PATH`-style list of directories to check for stylesheets given to the
-  `--style` option. Directories are separated by a _:_; blank entries are
-  ignored. Use _._ to include the current working directory.
+* `MATCHER_FILE`:
+  Path to a custom [matcher][CUSTOM MATCHERS] file. The `--matcher` option takes precedence
+  over this value.
 
-* `MANPAGER`:
-  The paging program used for man pages. This is typically set to
-  something like 'less -is'.
+## CUSTOM MATCHERS
 
-* `PAGER`:
-  Used instead of `MANPAGER` when `MANPAGER` is not defined.
+Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 
 ## RETURN VALUES
 
-failcount
+`iot` returns the number of tests which failed as its exit code.
 
 ## SECURITY CONSIDERATIONS
 
-eval
+Since `eval` is used, potentially arbitrary bits of code can be executed. The best way to avoid this potential security hole is to be somewhat intelligent when using `iot`. Running it as root or with things like 'rm -rf' as a command argument are bound for trouble, and to be fair, you probably deserve to get shot in the foot if you plan on using it like that.
 
 ## BUGS
 
-Please open up an issue on Github if you find a bug. Patches are always welcome.
+Please open up an [issue][] on Github if you find a bug. Patches and pull requests are always welcome.
+
+[issue]: https://github.com/scheibo/iot/issues
 
 ## COPYRIGHT
 

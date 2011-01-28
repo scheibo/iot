@@ -7,84 +7,99 @@
 \fBiot\fR \- input output test
 .
 .SH "SYNOPSIS"
-\fBname\fR [\fIoptional\fR\.\.\.] \fIflags\fR
+\fBiot\fR \fIprogram\fR \fItest\fR\.\.\.
+.
+.br
+\fBiot\fR \fIprogram\fR \fIsuite\fR\.\.\.
+.
+.br
 .
 .SH "DESCRIPTION"
-A normal paragraph\. This can span multiple lines and is terminated with two or more line endings \-\- just like Markdown\.
+\fBiot\fR serves as a testing \'suite\' for the times when you only care that given a certain input, a certain output is produced\. \fBiot\fR tries to be a simple solution to creating and managing test suites in this limited environment\.
 .
 .P
-Inline markup for \fBcode\fR, \fBuser input\fR, and \fBstrong\fR are displayed boldface; \fIvariable\fR, \fIemphasis\fR, \fIemphasis\fR, are displayed in italics (HTML) or underline (roff)\.
+The basic idea behind \fBiot\fR is that it runs a given program and saves the output (and error) streams, comparing them to the expected output (and error)\. \fBiot\fR can handle running entire suites of such tests (i\.e\. directories on input files), or simply individual tests\. One powerful feature that \fBiot\fR has is the ability to accept custom matchers for dealing with the output of tests\. See the \'Custom Test Matchers\' section below for more information\.
+.
+.IP "\(bu" 4
+view the README \fIhttps://github\.com/scheibo/iot#readme\fR\.
+.
+.IP "\(bu" 4
+view the annotated source \fIhttp://scheibo\.github\.com/iot\fR\.
+.
+.IP "" 0
+.
+.SH "USAGE"
+Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua\. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat\. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur\. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum\.
 .
 .P
-Manual references like sh(1), markdown(7), roff(7), etc\. are hyperlinked in HTML output\.
-.
-.P
-Link to sections like [STANDARDS][], [SEE ALSO][], or [WITH A DIFFERENT LINK TEXT][#SEE\-ALSO]\.
-.
-.P
-Definition lists:
-.
-.TP
-\fB\-a\fR, \fB\-\-argument\fR=[\fIvalue\fR]
-One or more paragraphs describing the argument\.
-.
-.TP
-You can put whatever you \fIwant\fR here, really
-Nesting and paragraph spacing are respected\.
-.
-.P
-Frequently used sections:
+Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua\. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat\. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur\. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum\.
 .
 .SH "OPTIONS"
+The following elements specify directory or file preferences\. These values can also be set by via the [ENVIRONMENT][]\.
 .
 .TP
-\fB\-b\fR \fIfile\fR
-True if \fIfile\fR exists and is a block special file\.
+\fB\-r\fR, \fB\-\-rootdir\fR,\fB\-\-rootdir\fR=\fIdirectory\fR
+The directory which contains the top level \'test\' directory\.
 .
 .TP
-\fB\-c\fR \fIfile\fR
-True if \fIfile\fR exists and is a character special file\.
+\fB\-t\fR \fIdirectory\fR, \fB\-\-tempdir\fR \fIdirectory\fR, \fB\-\-tempdir\fR=\fIdirectory\fR, \fB\-s\fR \fIdirectory\fR, \fB\-\-sandboxdir\fR \fIdirectory\fR, \fB\-\-sandboxdir\fR=\fIdirectory\fR
+The directory to store all of \fBiot\fR\'s temporary files\.
 .
 .TP
-\fB\-d\fR \fIfile\fR
-True if file exists and is a directory\.
+\fB\-c\fR \fIfile\fR, \fB\-\-command\fR \fIfile\fR, \fB\-\-command\fR=\fIfile\fR
+Use the given command to execute the \fIprogram\fR which is being tested as opposed to running it with \fB\./program\fR
 .
-.SH "SYNTAX"
+.TP
+\fB\-m\fR, \fB\-\-matcher\fR \fIfile\fR
+Path to a custom \fImatcher\fR file\.
+.
+.P
+Various different mode options can also be specified:
+.
+.TP
+\fB\-i\fR, \fB\-\-immeadiate\fR
+Immediately print diagnostic information regarding each failed test as opposed to waiting until all the tests have been run\.
+.
+.TP
+\fB\-x\fR, \fB\-\-sudden\-death\fR
+Stop testing after the first failed test\. Immediately exit and print information regarding the failed test case\.
+.
+.TP
+\fB\-q\fR, \fB\-\-quiet\fR
+Don\'t print any output, just return an exit code signaling pass or fail\.
 .
 .SH "ENVIRONMENT_VARIABLES"
 .
 .TP
-\fBRONN_MANUAL\fR
-A default manual name to be displayed in the top\-center header area\. The \fB\-\-manual\fR option takes precedence over this value\.
+\fBROOTDIR\fR
+The directory which contains the top level \'test\' directory\. The \fB\-\-rootdir\fR option takes precedence over this value\.
 .
 .TP
-\fBRONN_ORGANIZATION\fR
-The default manual publishing group, organization, or individual to be displayed in the bottom\-left footer area\. The \fB\-\-organization\fR option takes precedence over this value\.
+\fBSANDBOXDIR\fR
+The directory which contains the top level \'test\' directory\. The \fB\-\-sandboxdir\fR option takes precedence over this value\.
 .
 .TP
-\fBRONN_DATE\fR
-The default manual date in \fBYYYY\-MM\-DD\fR format\. Displayed in the bottom\-center footer area\. The \fB\-\-date\fR option takes precedence over this value\.
+\fBCOMMAND\fR
+Use the given command to execute the \fIprogram\fR which is being tested as opposed to running it with \fB\./program\fR\. The \fB\-\-command\fR option takes precedence over this value\.
 .
 .TP
-\fBRONN_STYLE\fR
-A \fBPATH\fR\-style list of directories to check for stylesheets given to the \fB\-\-style\fR option\. Directories are separated by a \fI:\fR; blank entries are ignored\. Use \fI\.\fR to include the current working directory\.
+\fBMATCHER_FILE\fR
+Path to a custom \fImatcher\fR file\. The \fB\-\-matcher\fR option takes precedence over this value\.
 .
-.TP
-\fBMANPAGER\fR
-The paging program used for man pages\. This is typically set to something like \'less \-is\'\.
+.SH "CUSTOM MATCHERS"
+Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua\. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat\. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur\. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum\.
 .
-.TP
-\fBPAGER\fR
-Used instead of \fBMANPAGER\fR when \fBMANPAGER\fR is not defined\.
+.P
+Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua\. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat\. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur\. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum\.
 .
 .SH "RETURN VALUES"
-failcount
+\fBiot\fR returns the number of tests which failed as its exit code\.
 .
 .SH "SECURITY CONSIDERATIONS"
-eval
+Since \fBeval\fR is used, potentially arbitrary bits of code can be executed\. The best way to avoid this potential security hole is to be somewhat intelligent when using \fBiot\fR\. Running it as root or with things like \'rm \-rf\' as a command argument are bound for trouble, and to be fair, you probably deserve to get shot in the foot if you plan on using it like that\.
 .
 .SH "BUGS"
-Please open up an issue on Github if you find a bug\. Patches are always welcome\.
+Please open up an issue \fIhttps://github\.com/scheibo/iot/issues\fR on Github if you find a bug\. Patches and pull requests are always welcome\.
 .
 .SH "COPYRIGHT"
 \fBiot\fR is Copyright (C) 2011 Kirk Scheibelhut http://scheibo\.com/about
