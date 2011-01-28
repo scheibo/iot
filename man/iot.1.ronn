@@ -1,5 +1,5 @@
-iot(1) -- input output test
-===========================
+iot(1) -- input/output tests
+============================
 
 ## SYNOPSIS
 
@@ -11,12 +11,10 @@ iot(1) -- input output test
 `iot` serves as a testing 'suite' for the times when you only care that given a certain input, a certain output is produced. `iot` tries to be a simple solution to creating and managing
  test suites in this limited environment.
 
-The basic idea behind `iot` is that it runs a given program and saves the output (and error) streams, comparing them to the expected output (and error). `iot` can handle running entire suites of such tests (i.e. directories on input files), or simply individual tests. One powerful feature that `iot` has is the ability to accept custom matchers for dealing with the output of tests. See the 'Custom Test Matchers' section below for more information.
-
+The basic idea behind `iot` is that it runs a given program and saves the output (and error) streams, comparing them to the expected output (and error). `iot` can handle running entire suites of such tests (i.e. directories on input files), or simply individual tests. One powerful feature that `iot` has is the ability to accept custom matchers for dealing with the output of tests. See the [CUSTOM MATCHERS][] section below for more information.
 
 * view the [README](https://github.com/scheibo/iot#readme).
 * view the annotated [source](http://scheibo.github.com/iot).
-
 
 ## USAGE
 
@@ -96,4 +94,4 @@ Please open up an [issue][] on Github if you find a bug. Patches and pull reques
 
 ## COPYRIGHT
 
-`iot` is Copyright (C) 2011 Kirk Scheibelhut http://scheibo.com/about
+`iot` is Copyright (C) 2011 Kirk Scheibelhut [http://scheibo.com/about](http://scheibo.com/about)
