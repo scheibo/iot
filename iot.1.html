@@ -3,7 +3,7 @@
 <head>
   <meta http-equiv='content-type' value='text/html;charset=utf8'>
   <meta name='generator' value='Ronn/v0.7.3 (http://github.com/rtomayko/ronn/tree/0.7.3)'>
-  <title>iot(1) - input output test</title>
+  <title>iot(1) - input/output tests</title>
   <style type='text/css' media='all'>
   /* style: man */
   body#manpage {margin:0}
@@ -74,7 +74,7 @@
 
   <h2 id="NAME">NAME</h2>
 <p class="man-name">
-  <code>iot</code> - <span class="man-whatis">input output test</span>
+  <code>iot</code> - <span class="man-whatis">input/output tests</span>
 </p>
 
 <h2 id="SYNOPSIS">SYNOPSIS</h2>
@@ -87,19 +87,25 @@
 <p><code>iot</code> serves as a testing 'suite' for the times when you only care that given a certain input, a certain output is produced. <code>iot</code> tries to be a simple solution to creating and managing
  test suites in this limited environment.</p>
 
-<p>The basic idea behind <code>iot</code> is that it runs a given program and saves the output (and error) streams, comparing them to the expected output (and error). <code>iot</code> can handle running entire suites of such tests (i.e. directories on input files), or simply individual tests. One powerful feature that <code>iot</code> has is the ability to accept custom matchers for dealing with the output of tests. See the 'Custom Test Matchers' section below for more information.</p>
+<p>The basic idea behind <code>iot</code> is that it runs a given program and saves the output (and error) streams, comparing them to the expected output (and error). <code>iot</code> can handle running entire suites of such tests (i.e. directories on input files), or simply individual tests. One powerful feature that <code>iot</code> has is the ability to accept custom matchers for dealing with the output of tests. See the <a href="#CUSTOM-MATCHERS" title="CUSTOM MATCHERS" data-bare-link="true">CUSTOM MATCHERS</a> section below for more information.</p>
 
 <ul>
-<li>view the <a href="https://github.com/scheibo/iot#readme">README</a>.</li>
+<li>view the <a href="(https://github.com/scheibo/iot#readme)">README</a>.</li>
 <li>view the annotated <a href="http://scheibo.github.com/iot">source</a>.</li>
 </ul>
 
 
 <h2 id="USAGE">USAGE</h2>
 
-<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+<p>The most straightforward set up of <code>iot</code> involves creating a directory named 'tests' (set <code>--testdir</code> or <var>TESTDIR</var> to change this name) in the top level of your project (<code>--rootdir</code> or <var>ROOTDIR</var>). Inside this 'tests' directory are one or more 'test suites' (or 'suites' for short). 'suites' are the basic unit of testing -- they consist of one or more input and expected output files. There is then two options for created your expected input and output: either place them all in the top-level of this suite directory and simply suffix them with '.in'. '.out' and '.err' respectively, or create these directories within the suite directory (i.e. 'suite_name/in', 'suite_name/out', 'suite_name/err'). Test input files can be named in any fashion (besides the .in suffix if they are in the top-level of a suite) with the exception of the prefix requirement that custom matchers impose. See the <a href="#CUSTOM-MATCHERS" title="CUSTOM MATCHERS" data-bare-link="true">CUSTOM MATCHERS</a> section below for more information regarding this special case. It is recommended that the input file names are descriptive of the tests nature, as they will appear in the failure message should the test not pass. The expected output messages need to been named the same as the input files (the only difference in names is that they're either in the 'out' directory or they are suffixed by '.out').</p>
 
-<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+<p><code>iot</code> can handle expected messages for both <code>stdout</code> and/or <code>stderr</code>, and either case can be excluded if you do not care about the output from a given stream on a give test. Unless you're using a custom matcher, at least one of these expect files needs to be present, as something needs to be passed to <code>diff</code>. One common trick is that if you require one of the streams to be empty, supply a blank file of that type (i.e. if you want to ensure there's no output on <code>stderr</code> supply a blank 'err' file for the given test).</p>
+
+<p>In order to run tests, simply issue the <code>iot</code> command from within the project. By default <code>iot</code> tries to run from the <code>git</code> or <code>hg</code> root, defaulting to the current working directory (<code>--rootdir</code> or <var>ROOTDIR</var> can override this behavior). <code>iot</code> expects the name of a program to test, followed to one or more test suites. By default, <code>iot</code> runs the program as <code>./program</code>, in order to change this behavior pass in a <code>--command</code> when calling <code>iot</code>. <code>iot</code> runs all the tests in the suites it is given, exiting with the number of tests failed and printing to <code>stdout</code> the failure when its is completed running.</p>
+
+<p>As an alternative to running an entire suite <code>iot</code> can be called with a specific test. This is may be the direct path to the test file, or alternatively a <em>pseudo</em> path which is of the form 'suite_name/test_name'. This will find an input file in the given suite (i.e. either a '.in' file or a 'in/*' file) which is named with 'test_name'.</p>
+
+<p>There are several different modes from running <code>iot</code>: these include verbose mode (<code>--verbose</code>) which prints longer diagnostic messages while running the tests, immediate mode (<code>--immediate</code>) which immediately prints full error diffs after every failure and 'sudden death' mode (<code>--sudden-death</code>) which stops testing files in a suite directly following the first error. More options for modes are detailed in the <a href="#OPTIONS" title="OPTIONS" data-bare-link="true">OPTIONS</a> section.</p>
 
 <h2 id="OPTIONS">OPTIONS</h2>
 
@@ -107,8 +113,9 @@
 set by via the [ENVIRONMENT][].</p>
 
 <dl>
-<dt><code>-r</code>, <code>--rootdir</code>,<code>--rootdir</code>=<var>directory</var></dt><dd><p>The directory which contains the top level 'test' directory.</p></dd>
-<dt><code>-t</code> <var>directory</var>, <code>--tempdir</code> <var>directory</var>, <code>--tempdir</code>=<var>directory</var>, <code>-s</code> <var>directory</var>, <code>--sandboxdir</code> <var>directory</var>, <code>--sandboxdir</code>=<var>directory</var></dt><dd><p>The directory to store all of <code>iot</code>'s temporary files.</p></dd>
+<dt><code>-s</code> <var>directory</var>, <code>--sandboxdir</code> <var>directory</var>, <code>--sandboxdir</code>=<var>directory</var>, <code>--tempdir</code> <var>directory</var>, <code>--tempdir</code>=<var>directory</var></dt><dd><p>The directory to store all of <code>iot</code>'s temporary files.</p></dd>
+<dt><code>-t</code> <var>directory</var>, <code>--testdir</code> <var>directory</var>, <code>--testdir</code>=<var>directory</var></dt><dd><p>The name of the directory that stores the tests. Defaults to '<var>ROOTDIR</var>/tests'</p></dd>
+<dt><code>-r</code>, <code>--rootdir</code>,<code>--rootdir</code>=<var>directory</var></dt><dd><p>The directory which contains the program to be tested.</p></dd>
 <dt><code>-c</code> <var>file</var>, <code>--command</code> <var>file</var>, <code>--command</code>=<var>file</var></dt><dd><p>Use the given command to execute the <var>program</var> which is being tested
 as opposed to running it with <code>./program</code></p></dd>
 <dt><code>-m</code>, <code>--matcher</code> <var>file</var></dt><dd><p>Path to a custom <a href="#CUSTOM-MATCHERS" title="CUSTOM MATCHERS" data-bare-link="true">matcher</a> file.</p></dd>
@@ -118,21 +125,27 @@ as opposed to running it with <code>./program</code></p></dd>
 <p>Various different mode options can also be specified:</p>
 
 <dl>
-<dt><code>-i</code>, <code>--immeadiate</code></dt><dd><p>Immediately print diagnostic information regarding each failed test
+<dt><code>-i</code>, <code>--immediate</code></dt><dd><p>Immediately print diagnostic information regarding each failed test
 as opposed to waiting until all the tests have been run.</p></dd>
+<dt><code>-v</code>, <code>--verbose</code></dt><dd><p>Print more verbose passing an failing messages as opposed to the
+traditional minimal RSpec format.</p></dd>
 <dt><code>-x</code>, <code>--sudden-death</code></dt><dd><p>  Stop testing after the first failed test. Immediately exit and print
   information regarding the failed test case.</p></dd>
 <dt><code>-q</code>, <code>--quiet</code></dt><dd><p>Don't print any output, just return an exit code signaling pass or fail.</p></dd>
+<dt><code>-u</code>, `--unified'</dt><dd><p>Use unified diffs as opposed to the standard failure message.</p></dd>
 </dl>
 
 
 <h2 id="ENVIRONMENT_VARIABLES">ENVIRONMENT_VARIABLES</h2>
 
 <dl>
-<dt class="flush"><code>ROOTDIR</code></dt><dd><p>The directory which contains the top level 'test' directory.
-  The <code>--rootdir</code> option takes precedence over this value.</p></dd>
-<dt><code>SANDBOXDIR</code></dt><dd><p>The directory which contains the top level 'test' directory.
+<dt><code>SANDBOXDIR</code></dt><dd><p>The directory to store all of <code>iot</code>'s temporary files.
 The <code>--sandboxdir</code> option takes precedence over this value.</p></dd>
+<dt class="flush"><code>TESTDIR</code></dt><dd><p>The name of the directory that stores the tests. Defaults
+to '<var>ROOTDIR</var>/tests'. The <code>--testdir</code> option takes precedence
+  over this value.</p></dd>
+<dt class="flush"><code>ROOTDIR</code></dt><dd><p>The directory which contains the program to be tested.
+  The <code>--rootdir</code> option takes precedence over this value.</p></dd>
 <dt class="flush"><code>COMMAND</code></dt><dd><p>  Use the given command to execute the <var>program</var> which is being tested
   as opposed to running it with <code>./program</code>. The <code>--command</code> option takes
   precedence over this value.</p></dd>
@@ -143,9 +156,16 @@ over this value.</p></dd>
 
 <h2 id="CUSTOM-MATCHERS">CUSTOM MATCHERS</h2>
 
-<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+<p><code>iot</code> provides the ability to using a custom matcher when determining if a test passes or fails as opposed to simply using diff. To create a custom matcher, create a file in the <var>TESTDIR</var> which is called either 'test_matcher' or 'iot_matcher'. Alternatively, specify a matcher file with the <code>--matcher</code> argument or the <var>MATCHER</var> environment variable. Inside the matcher file write one or more functions named '<code>prefix_</code>matcher', where <code>prefix</code> is the name of the given matcher you are hoping to create. Any tests in the input directory with this prefix at the beginning of their file name (seperated with a '_' or a '.' from the rest of the file name) will use this custom matcher as opposed to <code>diff</code>. A custom matcher is passed 4 arguments: <code>result_output</code>, <code>result_err</code>, <code>expected_output</code>, <code>expected_err</code>; where all of the previous arguments are paths which name the specific (possibly non-existent) files. An example of a matcher which checks the result error output for the message 'ERROR' would be:</p>
 
-<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+<pre><code># tests/test_matcher
+error_check_matcher() {
+    shift; # ignore result_output
+    grep "ERROR" "$1"
+}
+</code></pre>
+
+<p>See the <a href="(https://github.com/scheibo/iot#readme)">README</a> for far more in depth coverage of custom matchers.</p>
 
 <h2 id="RETURN-VALUES">RETURN VALUES</h2>
 
@@ -161,7 +181,7 @@ over this value.</p></dd>
 
 <h2 id="COPYRIGHT">COPYRIGHT</h2>
 
-<p><code>iot</code> is Copyright (C) 2011 Kirk Scheibelhut http://scheibo.com/about</p>
+<p><code>iot</code> is Copyright (C) 2011 Kirk Scheibelhut <a href="http://scheibo.com/about" data-bare-link="true">http://scheibo.com/about</a></p>
 
 
   <ol class='man-decor man-foot man foot'>
