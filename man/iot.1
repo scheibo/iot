@@ -29,10 +29,19 @@ view the annotated source \fIhttp://scheibo\.github\.com/iot\fR\.
 .IP "" 0
 .
 .SH "USAGE"
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua\. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat\. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur\. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum\.
+The most straightforward set up of \fBiot\fR involves creating a directory named \'tests\' (set \fB\-\-testdir\fR or \fITESTDIR\fR to change this name) in the top level of your project (\fB\-\-rootdir\fR or \fIROOTDIR\fR)\. Inside this \'tests\' directory are one or more \'test suites\' (or \'suites\' for short)\. \'suites\' are the basic unit of testing \-\- they consist of one or more input and expected output files\. There is then two options for created your expected input and output: either place them all in the top\-level of this suite directory and simply suffix them with \'\.in\'\. \'\.out\' and \'\.err\' respectively, or create these directories within the suite directory (i\.e\. \'suite_name/in\', \'suite_name/out\', \'suite_name/err\')\. Test input files can be named in any fashion (besides the \.in suffix if they are in the top\-level of a suite) with the exception of the prefix requirement that custom matchers impose\. See the \fICUSTOM MATCHERS\fR section below for more information regarding this special case\. It is recommended that the input file names are descriptive of the tests nature, as they will appear in the failure message should the test not pass\. The expected output messages need to been named the same as the input files (the only difference in names is that they\'re either in the \'out\' directory or they are suffixed by \'\.out\')\.
 .
 .P
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua\. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat\. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur\. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum\.
+\fBiot\fR can handle expected messages for both \fBstdout\fR and/or \fBstderr\fR, and either case can be excluded if you do not care about the output from a given stream on a give test\. Unless you\'re using a custom matcher, at least one of these expect files needs to be present, as something needs to be passed to \fBdiff\fR\. One common trick is that if you require one of the streams to be empty, supply a blank file of that type (i\.e\. if you want to ensure there\'s no output on \fBstderr\fR supply a blank \'err\' file for the given test)\.
+.
+.P
+In order to run tests, simply issue the \fBiot\fR command from within the project\. By default \fBiot\fR tries to run from the \fBgit\fR or \fBhg\fR root, defaulting to the current working directory (\fB\-\-rootdir\fR or \fIROOTDIR\fR can override this behavior)\. \fBiot\fR expects the name of a program to test, followed to one or more test suites\. By default, \fBiot\fR runs the program as \fB\./program\fR, in order to change this behavior pass in a \fB\-\-command\fR when calling \fBiot\fR\. \fBiot\fR runs all the tests in the suites it is given, exiting with the number of tests failed and printing to \fBstdout\fR the failure when its is completed running\.
+.
+.P
+As an alternative to running an entire suite \fBiot\fR can be called with a specific test\. This is may be the direct path to the test file, or alternatively a \fIpseudo\fR path which is of the form \'suite_name/test_name\'\. This will find an input file in the given suite (i\.e\. either a \'\.in\' file or a \'in/*\' file) which is named with \'test_name\'\.
+.
+.P
+There are several different modes from running \fBiot\fR: these include verbose mode (\fB\-\-verbose\fR) which prints longer diagnostic messages while running the tests, immediate mode (\fB\-\-immediate\fR) which immediately prints full error diffs after every failure and \'sudden death\' mode (\fB\-\-sudden\-death\fR) which stops testing files in a suite directly following the first error\. More options for modes are detailed in the \fIOPTIONS\fR section\.
 .
 .SH "OPTIONS"
 The following elements specify directory or file preferences\. These values can also be set by via the [ENVIRONMENT][]\.
@@ -61,8 +70,12 @@ Path to a custom \fImatcher\fR file\.
 Various different mode options can also be specified:
 .
 .TP
-\fB\-i\fR, \fB\-\-immeadiate\fR
+\fB\-i\fR, \fB\-\-immediate\fR
 Immediately print diagnostic information regarding each failed test as opposed to waiting until all the tests have been run\.
+.
+.TP
+\fB\-v\fR, \fB\-\-verbose\fR
+Print more verbose passing an failing messages as opposed to the traditional minimal RSpec format\.
 .
 .TP
 \fB\-x\fR, \fB\-\-sudden\-death\fR
@@ -71,6 +84,10 @@ Stop testing after the first failed test\. Immediately exit and print informatio
 .TP
 \fB\-q\fR, \fB\-\-quiet\fR
 Don\'t print any output, just return an exit code signaling pass or fail\.
+.
+.TP
+\fB\-u\fR, `\-\-unified\'
+Use unified diffs as opposed to the standard failure message\.
 .
 .SH "ENVIRONMENT_VARIABLES"
 .
