@@ -1,5 +1,26 @@
 #!/bin/bash
 
+#/ Usage: iot <program> <test-suite>...
+#/        iot <program> <test-file>...
+#/        iot --command=<program_runner> <program> <test-suite>...
+#/
+#/ Simple test runner for input/output tests. Feeds a given program
+#/ input files and compares the output to a set of expected output files.
+#/
+#/ Configuration options:
+#/    -s, --sandboxdir, --tempdir=<dir>  change the default temp directory
+#/    -t, --testdir=<dir>                change default test directory
+#/    -r, --rootdir=<dir>                change default root directory
+#/    -c, --command=<command>            use <command> to run the program
+#/    -m, --matcher=<file>               use the custom matchers in <file>
+#/
+#/ Mode options:
+#/    -i, --immediate                    immediately print diagnositc info
+#/    -v, --verbose                      more verbose failure program msgs
+#/    -x, --sudden-death                 stop after the first failed test
+#/    -q, --quiet                        test and return exit code, no output
+#/    -u, --unified                      use a unified diff for fail output
+
 # Here we try to determine where the root directory of the project we're testing is. We start by defaulting
 # to the current directory - in the most basic case iot will be run from the top level directory. However,
 # in order to provide more of a convience for people using source control, we'll also check if we're in a
@@ -37,7 +58,11 @@ pwarn() { printf "${YELLOW}${1}${RESET}"; }
 pfail() { printf "${RED}${1}${RESET}"; }
 
 # Straightforward usage and input methods.
-usage() { printf "USAGE: $0 progname [suite]*\n"; exit 1; }
+#| usage() { printf "USAGE: $0 progname [suite]*\n"; exit 1; }
+usage() {
+  grep '^#/' <"$0" | cut -c4-
+  exit "$1"
+}
 error() { printf "ERROR: ${1}"; exit 1; }
 
 # The main logic in the code. The basic idea is that we will want to create a sandbox to perform our tests,

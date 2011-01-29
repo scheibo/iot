@@ -33,20 +33,20 @@ There are several different modes from running `iot`: these include verbose mode
 The following elements specify directory or file preferences. These values can also be
 set by via the [ENVIRONMENT][].
 
-* `-s` <directory>, `--sandboxdir` <directory>, `--sandboxdir`=<directory>, `--tempdir` <directory>, `--tempdir`=<directory>:
+* `-s`, `--sandboxdir`, `--sandboxdir`=<directory>, `--tempdir`, `--tempdir`=<directory>:
   The directory to store all of `iot`'s temporary files.
 
-* `-t` <directory>, `--testdir` <directory>, `--testdir`=<directory>:
+* `-t`, `--testdir`, `--testdir`=<directory>:
   The name of the directory that stores the tests. Defaults to '<ROOTDIR>/tests'
 
 * `-r`, `--rootdir`,`--rootdir`=<directory>:
   The directory which contains the program to be tested.
 
-* `-c` <file>, `--command` <file>, `--command`=<file>:
+* `-c`, `--command`, `--command`=<file>:
   Use the given command to execute the <program> which is being tested
   as opposed to running it with `./program`
 
-* `-m`, `--matcher` <file>:
+* `-m`, `--matcher`, `--matcher`=<file>:
   Path to a custom [matcher][CUSTOM MATCHERS] file.
 
 Various different mode options can also be specified:
