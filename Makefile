@@ -11,6 +11,5 @@ pages:
 	git push origin gh-pages
 	git checkout master
 
-man:
-	set -e
+docs:
 	ronn -br5 --organization='SCHEIBO' --manual='iot Manual' man/*.ronn
