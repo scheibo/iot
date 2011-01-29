@@ -80,7 +80,7 @@ Sometimes `diff`-ing the expected and actual output streams to coarse -- perhaps
 
 Matchers form the other half of the custom test matcher system. A matcher is the actual function which determines whether the result output (and/or error) should be considered as 'passing'. `iot` looks for an `test_matcher` or `iot_matcher` shell file at the root of the test directory.. i.e.
 
-	test
+	tests
 	├── test_matcher
 	├── suite1
 	│   ├── in
@@ -93,7 +93,7 @@ This file get sourced in `iot` and is available to all of the test suites. Alter
 
 Inside of a matcher file should be a function named `prefix`matcher (where only the `prefix_` form is a allowed, since it is a function) which takes in a couple of arguments: `$result_output`, `$result_err`, `$expected_output`, `$expected_err`; where all of the previous arguments are paths which name the specific (possibly non-existent) files. The `$expected_output` and `$expected_err` files would be non-existent if they were not provided in the suites -- some matchers don't require these files. The matcher function need simply return a non-zero exit code to signal that the test has failed. Coming back to our error example from above:
 
-	# test/test_matcher
+	# tests/test_matcher
 	error_check_matcher() {
 		shift; # ignore result_output
 		grep "ERROR" "$1"
@@ -105,7 +105,7 @@ Here we can see the matcher only cares about the `$result_err` (here `$1` since 
 
 For a more advanced example, consider the case of outputting an unordered hash in the form 'key: val', where each entry in the hash gets its own line. Clearly, the majority of the time simply trying to match up this output to an expected output file is going to fail since the order of the hash is undefined. In order to get around this we can build a custom matcher. We'll name our input file `in/unordered.test_hash.in` and our expected output file `out/unordered.test_hash.out`. We don't care about errors in this simple example. We then need to create a `test/test_matcher` file with the following function:
 
-	# test/test_matcher
+	# tests/test_matcher
 	unordered_matcher(){
 		actual_output="$1"
 		expected_output="$3"
