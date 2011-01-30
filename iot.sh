@@ -25,8 +25,8 @@
 # [README]: https://github.com/scheibo/iot#readme
 # [man]: http://scheibo.github.com/iot/iot.1.html
 
-# Usage and Prerequisites
-# -----------------------
+# Usage
+# -----
 #
 # We include this line as a safety precaution -  it's important to exit
 # immediately if we run into any problems rather than potentially screwing
@@ -60,8 +60,8 @@ set -e
 #/    -q, --quiet                        test and return exit code, no output
 #/    -u, --unified                      use a unified diff for fail output
 
-# Here's our magic usage function, pretty much straight from shocco. We parse
-# our own file for our comment leader and then print the stripped message.
+# Our magic usage function, pretty much straight from [shocco][]. We parse our
+# own file for our comment leader and then print the stripped message.
 usage() {
   grep '^#/' <"$0" | cut -c4-
 }
@@ -77,8 +77,53 @@ error() {
   exit 1
 }
 
-# Option Processing
-# -----------------
+# Pass and Failure Messages
+# -------------------------
+#
+# The default pass and failure messages. We're taking after
+# [RSpec](http://rspec.info) here and simply printing a very minimal
+# indicator. Specifying `-v` will get the user more information if they want
+# it. One thing to note is that the messages will get colored (red and green,
+# respectively) later on down the line.
+passmsg() { printf "."; }
+failmsg() { printf "F"; }
+
+# There is also the verbose options for the messages. Two things to note are
+# how we manually include a newline and how we're normalizing the test file
+# name to remove any leading path or .in cruft.
+verbose_passmsg() {
+  test_name="${1##/*/}"
+  test_name="${test_name%%.in}"
+  printf "Passed test: $test_name\n"
+}
+verbose_failmsg() {
+  test_name="${1##/*/}"
+  test_name="${test_name%%.in}"
+  printf "Failed test: $test_name\n"
+}
+
+# Colors
+# ------
+#
+# In order to change the terminal colors we're going to use tput as opposed to
+# escape codes (for fun!). We need to be sure to finish with a RESET every
+# time we change the color or else the color will continue to be used for the
+# rest of the output (or at least until it is changed again).
+RED=$(tput setaf 1)
+GREEN=$(tput setaf 2)
+YELLOW=$(tput setaf 3)
+BOLD=$(tput bold)
+RESET=$(tput sgr0)
+
+# There are helper functions for printing passing, warning and failing
+# messages. They simply wrap their input in colors. Notice the conspicious use
+# of `printf(1)` in all of this code without a `\n`.
+ppass() { printf "${GREEN}${1}${RESET}"; }
+pwarn() { printf "${YELLOW}${1}${RESET}"; }
+pfail() { printf "${RED}${1}${RESET}"; }
+
+# Option Processing and Setup
+# ---------------------------
 #
 # The code for option processing is pretty self explanatory, just a loop
 # through the command line arguments, assigning variables and shifting as we
@@ -141,6 +186,71 @@ do
   esac
 done
 
+# Sandbox and Cleanup
+# -------------------
+#
+# We need a place to send all the output from the program we're testing before
+# we can see if it matches the expected output. We'll need a temporary sandbox
+# directory to do this. We use the `:=` paramter expansion to make sure
+# `TMPDIR` is set. We then try to use `mktmp(1)` to create the temp directory
+# if we're lucky enough to have it, otherwise we create our directory far more
+# insecurely using the programs basename and pid. One thing to note: some
+# implementations of `mktmp(1)` require the string of X's and other don't, I
+# had trouble installing `shocco(1)` on my machines because of this issue.
+: ${TMPDIR:=/tmp}
+: ${SANDBOXDIR:=$(
+      if command -v mktemp 1>/dev/null 2>&1
+      then
+          mktemp -dt "$(basename $0).XXXXXXXXXXXXX"
+      else
+          dir="$TMPDIR/$(basename $0).$$"
+          mkdir "$dir"
+          echo "$dir"
+      fi
+  )}
+
+# Here we perform a bit of a sanity check to make sure we're not using a
+# stupid location for our temp directory which would result in lots of
+# potentially nasty things happening.
+if [ -z "$SANDBOX" -o "$WORK" = "/" ]; then
+  error "$(basename $0): could not create a temporary sandbox directory"
+fi
+
+# Most importantly we're going to register an `EXIT` trap to clean up our temp # directory unless we're killed witbh `SIGKILL.`
+#
+# All of the code dealing with creating and cleaning up our temporary sandbox # directory comes at you straight out of [shocco][].
+trap "rm -rf $SANDBOXDIR" 0
+
+# 'Root' Directory
+# ----------------
+#
+# Here we try to determine where the root directory of the project we're
+# testing is. We first need to check if if `ROOTDIR` was already set by the
+# user through the `--rootdir` command line option. This leverages the
+# `${var:+val}` variable subsititution form which returns its value if
+# `ROOTDIR` is defined and not null.We start by defaulting to the current
+# directory - in the most basic case `iot` will be run from the top level
+# directory. However, in order to provide more of a convenience for people
+# using source control, we'll also check if we're in a `hg` or `git`
+# repository, using the root of that repository as the root directory for the
+# script. This allows us to call the script anywhere in the project and it
+# will still be able to find the correct files.
+if [ ${ROOTDIR:+1} -eq 1 ]; then
+  ROOTDIR=`pwd`
+  hg root >& '/dev/null' && ROOTDIR=`hg root`
+  git rev-parse --show-toplevel >& '/dev/null' && ROOTDIR=`git rev-parse --show-toplevel`
+fi
 
 
 
+# Final Preparations
+# ------------------
+#
+# Main option processing. The first argument to iot is the test file and the rest of the options denote suites
+# to run. However, we need to take into account the special case where we are given just a program name - in
+# this case we don't want to shift since that name also needs to be passed in order to name  the suite to run.
+[[ -f "${ROOTDIR}/${1}" ]] || usage
+PROGNAME="${ROOTDIR}/${1}"
+[[ $# -eq 1 ]] || shift
+
+dotest $@
