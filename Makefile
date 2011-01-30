@@ -1,6 +1,5 @@
 rev = $(shell git rev-parse --short HEAD |  tr -d "\n")
 pages:
-	set -e
 	shocco -t iot iot > ../index.html
 	ronn -br5 --organization='SCHEIBO' --manual='iot Manual' man/*.ronn
 	cp man/*.html ..
@@ -13,3 +12,6 @@ pages:
 
 docs:
 	ronn -br5 --organization='SCHEIBO' --manual='iot Manual' man/*.ronn
+
+shocco:
+	shocco -t iot iot.sh > test.html

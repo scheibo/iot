@@ -33,7 +33,7 @@ There are several different modes from running `iot`: these include verbose mode
 The following elements specify directory or file preferences. These values can also be
 set by via the [ENVIRONMENT][].
 
-* `-s`, `--sandboxdir`, `--sandboxdir`=<directory>, `--tempdir`, `--tempdir`=<directory>:
+* `-s`, `--sandboxdir`, `--sandboxdir`=<directory>:
   The directory to store all of `iot`'s temporary files.
 
 * `-t`, `--testdir`, `--testdir`=<directory>:
@@ -66,7 +66,7 @@ Various different mode options can also be specified:
 * `-q`, `--quiet`:
   Don't print any output, just return an exit code signaling pass or fail.
 
-* `-u`, `--unified':
+* `-u`, `--unified`:
   Use unified diffs as opposed to the standard failure message.
 
 ## ENVIRONMENT_VARIABLES

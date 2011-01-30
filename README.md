@@ -1,13 +1,13 @@
 # iot
 
-`iot` serves as a testing 'suite' for the times when you only care that given a certain input, a certain output is produced. `iot` tries to be a simple solution to creating and managing
+`iot` serves as a testing 'framework' for the times when you only care that given a certain input, a certain output is produced. `iot` tries to be a simple solution to creating and managing
  test suites in this limited environment.
 
 The basic idea behind `iot` is that it runs a given program and saves the output (and error) streams, comparing them to the expected output (and error). `iot` can handle running entire suites of such tests (i.e. directories on input files), or simply individual tests. One powerful feature that `iot` has is the ability to accept custom matchers for dealing with the output of tests. See the 'Custom Test Matchers' section below for more information.
 
 The source file for `iot` aims to be easy to edit, so feel free to fork and change the project so that it suits you better.
 
- * see the manpage [iot.1](http://scheibo.github.com/iot/iot.1.html)
+ * see the manpage [iot(1)](http://scheibo.github.com/iot/iot.1.html)
  * view the annotated [source](http://scheibo.github.com/iot)
 
 ## Installation
