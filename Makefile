@@ -14,23 +14,23 @@ rev = $(shell git rev-parse --short HEAD |  tr -d "\n")
 all: $(PROGRAM)
 
 $(PROGRAM): $(SOURCES)
-  rm -f $@
-  cat $(SOURCES) > $@+
-  $(SHELL) -n $@+
-  mv $@+ $@
-  chmod 0755 $@
+	rm -f $@
+	cat $(SOURCES) > $@+
+	$(SHELL) -n $@+
+	mv $@+ $@
+	chmod 0755 $@
 
 install: $(PROGRAM)
-  install -d "$(execdir)"
-  install -m 0755 $(PROGRAM) "$(execdir)/$(PROGRAM)"
-  install -d "$(mandir)/man1"
-  install -m 0644 man/iot.1 "$(mandir)/man1/iot.1"
+	install -d "$(execdir)"
+	install -m 0755 $(PROGRAM) "$(execdir)/$(PROGRAM)"
+	install -d "$(mandir)/man1"
+	install -m 0644 man/iot.1 "$(mandir)/man1/iot.1"
 
 run: all
-  ./$(PROGRAM)
+	./$(PROGRAM)
 
 clean:
-  rm -f $(PROGRAM)
+	rm -f $(PROGRAM)
 
 pages:
 	shocco -t iot iot.sh > ../index.html
@@ -52,4 +52,4 @@ shocco:
 test:
 	echo "TODO"
 
-.PHONY run install pages docs shocco clean test
+.PHONY: run install pages docs shocco clean test
