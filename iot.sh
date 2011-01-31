@@ -59,6 +59,7 @@ set -e
 #/    -x, --sudden-death                 stop after the first failed test
 #/    -q, --quiet                        test and return exit code, no output
 #/    -u, --unified                      use a unified diff for fail output
+#/    --safe, --copy                     copy the source to allow for editting
 
 # Our magic usage function, pretty much straight from [shocco][]. We parse our
 # own file for our comment leader and then print the stripped message.
@@ -131,17 +132,12 @@ pfail() { printf "${RED}${1}${RESET}"; }
 # later on if they haven't been set by the user. All of our booleans denote
 # exceptional cases, so they all start out as false unless changed by the
 # user.
-SANDBOXDIR=
-TESTDIR=
-ROOTDIR=
-COMMAND=
 immediate=false
 verbose=false
 sudden_death=false
 quiet=false
 unified=false
-
-test
+safe=false
 
 # It's sometimes difficult to remember all the proper option names, so `iot`
 # tries to 'do the Right Thing' if the arguments don't exactly match. Notice,
@@ -179,6 +175,7 @@ do
     -v|-vv|--verbose)           verbose=true;          shift   ;;
     -q|--quiet|--silent)        quiet=true;            shift   ;;
     -u|--unified)               unified=true;          shift   ;;
+    --copy|--safe|--concurrent) safe=true;             shift   ;;
     -x|--sudden-death|--sudden_death|--suddendeath)
                                 sudden_death=true;     shift   ;;
 
@@ -248,15 +245,29 @@ fi
 #
 # Last tiny bit of argument parsing. The first argument to iot is the test
 # file and the rest of the options denote suites or tests to run to run.
+#
+# The safe option copies the entire source code of the program and is thus
+# likely to be slow, but its the only way to safely be able to concurrently
+# edit the program while we're testing it. Using `rsync(1)` here might be a
+# better idea if we're trying to do some autotesting-like behavior.
 [[ -f "${ROOTDIR}/${1}" ]] || error "expects program to test as argument"
-PROGNAME="${ROOTDIR}/${1}"
+
+if $safe; then
+  cp "${ROOTDIR}/${1}" "${SANDBOXDIR}/program"
+  PROGNAME="${SANDBOXDIR}/program"
+else
+  PROGNAME="${ROOTDIR}/${1}"
+fi
 
 # Testing Function
 # ----------------
 #
 # Here lies the heart of the code
 dotest() {
-  testfile=$1;
+  testfile=$1; suite=$2; location=$3
+
+
+
 }
 
 # Main Testing Loop
@@ -282,7 +293,9 @@ if ! $quiet; then echo "Started"; fi
 
 # We're going to loop through everything left standing on the command line and
 # try to figure out what type of argument we have (pseudo path or entire test
-# suite), ultimately passing each test file to `dotest`
+# suite), ultimately passing each test file to `dotest` with either a 'top' or
+# an 'in' argument signalling to `dotest` where it should look for expected
+# output files.
 #
 # The first case (in order of increasing complication) is the case where we
 # we're given a suite - in that case we're given a directory name and we just
@@ -299,19 +312,23 @@ for arg in $@; do
 
   if [ -d "${TESTDIR}/$arg" ]; then
 
-    for testfile in $(find . -type f
-    \( -path "./$suite/*.in" -o -path "./$suite/in/*" \) -print); do
-      dotest testfile
+    for file in $(find ${TESTDIR} -type f -path "${TESTDIR}/$arg/*.in"); do
+      dotest file "${TESTDIR}/$arg" "top"
+    done
+
+    for file in $(find ${TESTDIR} -type f -path "${TESTDIR}/$arg/in/*"); do
+      dotest file "${TESTDIR}/$arg" "in"
     done
 
   elif [ -d "${TESTDIR}/$(dirname $arg)" ] &&
        [ -f "${TESTDIR}/$(dirname $arg)/$(basename $arg).in" ] ||
        [ -f "${TESTDIR}/$(dirname $arg)/in/$(basename $arg)" ]; then
 
-       if [ -f "${TESTDIR}/$(dirname $arg)/$(basename $arg).in" ]; then
-         dotest "${TESTDIR}/$(dirname $arg)/$(basename $arg).in"
+       suite="${TESTDIR}/$(dirname $arg)"
+       if [ -f "$suite/$(basename $arg).in" ]; then
+         dotest "$suite/$(basename $arg).in" suite "top"
        else
-         dotest "${TESTDIR}/$(dirname $arg)/in/$(basename $arg)"
+         dotest "$suite/in/$(basename $arg)" suite "in"
        fi
 
   else
