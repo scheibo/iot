@@ -259,15 +259,135 @@ else
   PROGNAME="${ROOTDIR}/${1}"
 fi
 
+# We a place to concatenate our error messages that build up, so we create a
+# `results` file to append to. In order to avoid collisions with test names
+# we'll stick on our pid as well. We're also going to create an `immediate`
+# results file as well, which will kind of act like a buffer to `results`.
+results="${SANDBOXDIR}/iot-results-$$"
+immediate_results="${SANDBOXDIR}/iot-immediate-$$"
+
 # Testing Function
 # ----------------
 #
-# Here lies the heart of the code
+# Here lies the heart of the code. The control flow is broken up into several
+# subroutines that all share the same variables (I guess that's one benefit of
+# the shell's unscoped variables?). This seperation of the code into logical
+# units is purely for convenience and presentation.
+
+# The first step in testing a given program is to determine where it's
+# expected out and error files would be located. `testfile`, `suite` and
+# `location` are all passed to `dotest` (the main testing function) and
+# `get_locations` utilizes these arguments to figure out where the expect
+# files are. If the `location` passed to `dotest` is "top" then we just check
+# in the top level of the suite, otherwise we delve into the subdirectories.
+# *Note:* these expect files may not exist - we're just trying to find out
+# where they would be _if_ they did exist.
+get_locations() {
+  testname="$(basename $testfile)"
+  testname="${testname%%.in}"
+
+  if "$location" = "top"; then
+    expect_out="${suite}/${testname}.out"
+    expect_err="${suite}/${testname}.err"
+  else # "in"
+    expect_out="${suite}/out/${testname}"
+    expect_err="${suite}/err/${testname}"
+  fi
+}
+
+# The next step is to actually run the program with the test as input, saving
+# the output streams in our `SANDBOXDIR`. `eval` shows it's ugly face here,
+# but if the `COMMAND` that was passed in contains addition options (like
+# `valgrind --leak-check=yes`, or something of that sort) then `eval` is
+# necessary.
+run_test() {
+  actual_out="${SANDBOXDIR}/${testname}.out"
+  actual_err="${SANDBOXDIR}/${testname}.err"
+
+  if [ ${COMMAND:+1} -eq 1 ]; then
+    eval ${COMMAND} $PROGNAME < $testfile > $actual_out 2> $actual_err
+  elif [ -x $PROGNAME ]; then
+    "./$PROGNAME"  < $testfile > $actual_out 2> $actual_err
+  else
+    error "$PROGNAME is not executable, cannot run tests"
+  fi
+}
+
+# Now we need to actually perform the `diff`. Since we need to possibly
+# compare both out and error streams we need to make a 'combined' file that
+# holds both of these appended to each other, provided the expect files exist.
+# `dotest` will check the exit status of this which in turn will be the exit
+# value of the `diff`.
+perform_diff() {
+  combined_expect="${SANDBOXDIR}/${testname}.combined.expect"
+  combined_result="${SANDBOXDIR}/${testname}.combined.result"
+
+  [[ -f "$expect_out" ]] && cat "$expect_out" >> combined_expect
+  [[ -f "$expect_err" ]] && cat "$expect_err" >> combined_expect
+  cat "$actual_out" "$actual_err" >> combined_result
+
+  diff $combined_expect $combined_result >/dev/null 2>&1
+}
+
+# Very straightforward chunk of code for the passing and failing message s- we
+# simply print a different message depending on whether or not we've been
+# passed the option `--verbose` or not.
+passing_message() {
+  if $verbose; then
+    ppass `verbose_passmsg $testfile $count`
+  else
+    ppass `passmsg $testfile $count`
+  fi
+}
+
+failing_message() {
+  if $verbose; then
+     ppass `verbose_failmsg $testfile $count`
+   else
+     ppass `failmsg $testfile $count`
+   fi
+}
+
+# The code to build up the result and possibly display it.
+failing_case() {
+  failing_message
+
+  printf "\n${failcount}) ${RED}${suite}/${testname}${RESET}\n" >>"$immediate"
+
+  #BUILD THE MESSAGE: TODO
+
+  sed 's/^/    /g' $immediate >> $results
+
+  if $immediate then;
+    sed 's/^/    /g' $immediate
+  elif $suddendeath; then
+    cat $results && exit 1
+  fi
+}
+
+# Here's the function that is composed of all the above subroutines. We're
+# passed `testfile`, `suite` and `location` and then we call the respective
+# subs to do all the work. We make sure we check the `quiet` flag so that we
+# don't output anything if the flag is set.
 dotest() {
   testfile=$1; suite=$2; location=$3
 
+  get_locations
+  run_test
+  perform_diff
 
+  if [ $? -eq 0 ]; then
+    if ! $quiet; then
+      passing_message
+    fi
+  else
+    failcount=`expr $failcount + 1`
+    if ! $quiet; then
+      failing_case
+    fi
+  fi
 
+  testcount=`expr $testcount + 1`
 }
 
 # Main Testing Loop
@@ -342,11 +462,17 @@ done
 # Wrapping Up
 # -----------
 #
-# Standard case finishing action
+# Standard case finishing action (i.e. we didn't terminate early thanks to
+# `--immediate` or `--sudden-death`) - we simply display the results and the
+# statistics (passes vs. failures). We don't display the results when
+# immediate is set since they've already all been shown. The results are
+# already conveniently indented from when they were created.
 if ! $quiet; then
   echo "Finished"
 
-  cat "${SANDBOXDIR}/results"
+  if ! $immediate; then
+    cat $results
+  fi
 
   if [ $failcount -eq 0 ]; then
       ppass "\n\n${testcount} tests, ${failcount} failures\n"
