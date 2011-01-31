@@ -7,13 +7,15 @@
 # (and error). iot can handle running entire suites of such tests (i.e.
 # directories on input files), or simply individual tests.
 #
-# Installing `iot` is simple, simply clone the repository and copy (or link)
-# the 'iot' file to a location on your `PATH` (like `/usr/local`, for
-# example).
+# Installing `iot` is simple - just clone the repository and copy (or link)
+# the 'iot' file to a location on your `PATH` (like `~/bin`, for
+# example). Alternatively, if you want to have it in /usr/local/bin and the
+# man pages installed correctly:
 #
 #     $ git clone git://github.com/scheibo/iot.git
 #     $ cd iot
-#     $ [sudo] cp iot /bin/somewhere/on/your/path
+#     $ make
+#     $ make install
 #     $ iot program suite
 #
 # This web page was created by running [shocco][] against the `iot` [source][]

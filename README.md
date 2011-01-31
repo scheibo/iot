@@ -14,7 +14,8 @@ The source file for `iot` aims to be easy to edit, so feel free to fork and chan
 
 	$ git clone git://github.com/scheibo/iot.git
 	$ cd iot
-	$ [sudo] cp iot /bin/somewhere/on/your/path
+	$ make
+	$ make install
 
 ## Features
 
