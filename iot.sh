@@ -263,7 +263,7 @@ dotest() {
 # -----------------
 #
 # The default location we're going to be look for tests when resolving
-# 'pseudo' paths and suite names. The `:=' form is used here again, it's
+# 'pseudo' paths and suite names. The `:=` form is used here again, it's
 # similar to the `||=` in Ruby.
 default="${ROOTDIR}/tests"
 : ${TESTDIR:=default}
