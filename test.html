@@ -102,7 +102,7 @@ like 125 might help, but that's just delaying the issue.</p>
 
 </td><td class=code><div class=highlight><pre>
 error<span class="o">()</span> <span class="o">{</span>
-  <span class="nb">printf</span> <span class="s2">&quot;$(basename $0): ${*}\n\n&quot;</span>
+  <span class="nb">printf</span> <span class="s2">&quot;${*}\n\n&quot;</span>
   usage
   <span class="nb">exit </span>1
 <span class="o">}</span>
@@ -232,7 +232,7 @@ real estate here.</p>
                                 <span class="nv">sudden_death</span><span class="o">=</span><span class="nb">true</span>;     <span class="nb">shift</span>   ;;
 
     -h|--help|<span class="s1">&#39;-?&#39;</span>|<span class="s1">&#39;--?&#39;</span><span class="o">)</span> usage <span class="o">&amp;&amp;</span> <span class="nb">exit </span>0                      ;;
-    -*<span class="o">)</span> error <span class="s2">&quot;unrecognized option: ${1}&quot;</span>                      ;;
+    -*<span class="o">)</span> error <span class="s2">&quot;Unrecognized option: ${1}&quot;</span>                      ;;
     *<span class="o">)</span> <span class="nb">break</span>                                                   ;;
   <span class="k">esac</span>
 <span class="k">done</span>
@@ -271,7 +271,7 @@ potentially nasty things happening.</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$SANDBOX&quot;</span> -o <span class="s2">&quot;$WORK&quot;</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">  </span>error <span class="s2">&quot;could not create a temporary sandbox directory&quot;</span>
+<span class="k">  </span>error <span class="s2">&quot;$(basename $0): could not create a temporary sandbox directory&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -306,17 +306,20 @@ will still be able to find the correct files.</p>
   git rev-parse --show-toplevel &gt;&amp; <span class="s1">&#39;/dev/null&#39;</span> <span class="o">&amp;&amp;</span> <span class="nv">ROOTDIR</span><span class="o">=</span><span class="sb">`</span>git rev-parse --show-toplevel<span class="sb">`</span>
 <span class="k">fi</span>
 
+
+
 </pre></div></td></tr><tr><td class=docs>
 
 <h2>Final Preparations</h2>
 
-<p>Last tiny bit of argument parsing. The first argument to iot is the test
-file and the rest of the options denote suites or tests to run to run.</p>
+<p>Main option processing. The first argument to iot is the test file and the rest of the options denote suites
+to run. However, we need to take into account the special case where we are given just a program name - in
+this case we don't want to shift since that name also needs to be passed in order to name  the suite to run.</p>
 
 </td><td class=code><div class=highlight><pre>
-<span class="o">[[</span> -f <span class="s2">&quot;${ROOTDIR}/${1}&quot;</span> <span class="o">]]</span> <span class="o">||</span> error <span class="s2">&quot;expects program to test as argument&quot;</span>
+<span class="o">[[</span> -f <span class="s2">&quot;${ROOTDIR}/${1}&quot;</span> <span class="o">]]</span> <span class="o">||</span> usage
 <span class="nv">PROGNAME</span><span class="o">=</span><span class="s2">&quot;${ROOTDIR}/${1}&quot;</span>
-
+<span class="o">[[</span> <span class="nv">$# </span>-eq 1 <span class="o">]]</span> <span class="o">||</span> <span class="nb">shift</span>
 
 dotest <span class="nv">$@</span>
 
