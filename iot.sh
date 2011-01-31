@@ -352,3 +352,10 @@ if ! $quiet; then
 fi
 
 exit $failcount
+
+# Copyright
+# ---------
+#
+# Copyright (C) [Kirk Scheibelhut](http://scheibo.com/about)<br />
+# This is Free Software distributed under the MIT license.
+:
