@@ -72,7 +72,7 @@ usage() {
 # usually the fail count is the exit code). Changing status with something
 # like 125 might help, but that's just delaying the issue.
 error() {
-  printf "${*}\n\n"
+  printf "$(basename $0): ${*}\n\n"
   usage
   exit 1
 }
@@ -181,7 +181,7 @@ do
                                 sudden_death=true;     shift   ;;
 
     -h|--help|'-?'|'--?') usage && exit 0                      ;;
-    -*) error "Unrecognized option: ${1}"                      ;;
+    -*) error "unrecognized option: ${1}"                      ;;
     *) break                                                   ;;
   esac
 done
@@ -213,7 +213,7 @@ done
 # stupid location for our temp directory which would result in lots of
 # potentially nasty things happening.
 if [ -z "$SANDBOX" -o "$WORK" = "/" ]; then
-  error "$(basename $0): could not create a temporary sandbox directory"
+  error "could not create a temporary sandbox directory"
 fi
 
 # Most importantly we're going to register an `EXIT` trap to clean up our temp # directory unless we're killed witbh `SIGKILL.`
@@ -241,16 +241,13 @@ if [ ${ROOTDIR:+1} -eq 1 ]; then
   git rev-parse --show-toplevel >& '/dev/null' && ROOTDIR=`git rev-parse --show-toplevel`
 fi
 
-
-
 # Final Preparations
 # ------------------
 #
-# Main option processing. The first argument to iot is the test file and the rest of the options denote suites
-# to run. However, we need to take into account the special case where we are given just a program name - in
-# this case we don't want to shift since that name also needs to be passed in order to name  the suite to run.
-[[ -f "${ROOTDIR}/${1}" ]] || usage
+# Last tiny bit of argument parsing. The first argument to iot is the test
+# file and the rest of the options denote suites or tests to run to run.
+[[ -f "${ROOTDIR}/${1}" ]] || error "expects program to test as argument"
 PROGNAME="${ROOTDIR}/${1}"
-[[ $# -eq 1 ]] || shift
+
 
 dotest $@
