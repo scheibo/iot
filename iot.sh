@@ -281,19 +281,10 @@ failcount=0
 if ! $quiet; then echo "Started"; fi
 
 # We're going to loop through everything left standing on the command line and
-# try to figure out what type of argument we have (path to test, pseudo path,
-# or entire test suite), ultimately passing each test file to `dotest`
+# try to figure out what type of argument we have (pseudo path or entire test
+# suite), ultimately passing each test file to `dotest`
 #
-# The first case is that we're given a file. We're not going to touch this
-# file name in any way - i.e. we're not going assume it's relative to the
-# `ROOTDIR`. Why do we have this behavior? It's a judgement call, but I can
-# see myself using tab completion to get the full path any. Or something. If
-# you want logical behavior use the 'pseudo' path to an individual test. Also
-# note that here we're testing `-f` instead or '-e' because we don't want any
-# directories. This is a _special_ case, purely for development cases when you
-# want to run a specific file.
-#
-# The next case (in order of increasing complication) is the case where we
+# The first case (in order of increasing complication) is the case where we
 # we're given a suite - in that case we're given a directory name and we just
 # run the `dotest` function on each test file in that directory.
 #
@@ -306,11 +297,7 @@ if ! $quiet; then echo "Started"; fi
 # passing it off to `dotest`
 for arg in $@; do
 
-  if [ -f "$arg" ]; then
-
-     dotest arg
-
-  elif [ -d "${TESTDIR}/$arg" ]
+  if [ -d "${TESTDIR}/$arg" ]; then
 
     for testfile in $(find . -type f
     \( -path "./$suite/*.in" -o -path "./$suite/in/*" \) -print); do
@@ -319,7 +306,7 @@ for arg in $@; do
 
   elif [ -d "${TESTDIR}/$(dirname $arg)" ] &&
        [ -f "${TESTDIR}/$(dirname $arg)/$(basename $arg).in" ] ||
-       [ -f "${TESTDIR}/$(dirname $arg)/in/$(basename $arg)" ]
+       [ -f "${TESTDIR}/$(dirname $arg)/in/$(basename $arg)" ]; then
 
        if [ -f "${TESTDIR}/$(dirname $arg)/$(basename $arg).in" ]; then
          dotest "${TESTDIR}/$(dirname $arg)/$(basename $arg).in"
