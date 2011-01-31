@@ -141,6 +141,8 @@ sudden_death=false
 quiet=false
 unified=false
 
+test
+
 # It's sometimes difficult to remember all the proper option names, so `iot`
 # tries to 'do the Right Thing' if the arguments don't exactly match. Notice,
 # for example, that 'immeadiate' is provided as an option, as I commonly typo
@@ -237,8 +239,8 @@ trap "rm -rf $SANDBOXDIR" 0
 # will still be able to find the correct files.
 if [ ${ROOTDIR:+1} -eq 1 ]; then
   ROOTDIR=`pwd`
-  hg root >& '/dev/null' && ROOTDIR=`hg root`
-  git rev-parse --show-toplevel >& '/dev/null' && ROOTDIR=`git rev-parse --show-toplevel`
+  hg root 1>/dev/null 2>&1 && ROOTDIR=`hg root`
+  git rev-parse --show-toplevel 1>/dev/null 2>&1 && ROOTDIR=`git rev-parse --show-toplevel`
 fi
 
 # Final Preparations
@@ -249,5 +251,104 @@ fi
 [[ -f "${ROOTDIR}/${1}" ]] || error "expects program to test as argument"
 PROGNAME="${ROOTDIR}/${1}"
 
+# Testing Function
+# ----------------
+#
+# Here lies the heart of the code
+dotest() {
+  testfile=$1;
+}
 
-dotest $@
+# Main Testing Loop
+# -----------------
+#
+# The default location we're going to be look for tests when resolving
+# 'pseudo' paths and suite names. The `:=' form is used here again, it's
+# similar to the `||=` in Ruby.
+default="${ROOTDIR}/tests"
+: ${TESTDIR:=default}
+
+# We keep track of two counter variables in our test loop - `testcount` and
+# `failcount`. `testcount` keeps track of the number of tests run and
+# `failcount` keeps track of the number of tests which have failed. These are
+# mainly useful for the summary message at the end, but we also use failcount
+# as our exit code.
+testcount=0
+failcount=0
+
+# If we're in quiet mode we just care about the exit code and don't need the
+# chatty 'Started' message
+if ! $quiet; then echo "Started"; fi
+
+# We're going to loop through everything left standing on the command line and
+# try to figure out what type of argument we have (path to test, pseudo path,
+# or entire test suite), ultimately passing each test file to `dotest`
+#
+# The first case is that we're given a file. We're not going to touch this
+# file name in any way - i.e. we're not going assume it's relative to the
+# `ROOTDIR`. Why do we have this behavior? It's a judgement call, but I can
+# see myself using tab completion to get the full path any. Or something. If
+# you want logical behavior use the 'pseudo' path to an individual test. Also
+# note that here we're testing `-f` instead or '-e' because we don't want any
+# directories. This is a _special_ case, purely for development cases when you
+# want to run a specific file.
+#
+# The next case (in order of increasing complication) is the case where we
+# we're given a suite - in that case we're given a directory name and we just
+# run the `dotest` function on each test file in that directory.
+#
+# The final case is the pseudo path - something of the form 'suite/path'. This
+# kind of gets ugly. First we test of the suite directory even exists - we can
+# leverage (abuse?) `dirname` to strip the suite name. We then check both
+# styles for how test files can be defined, this time making use of `basename`
+# to strip the other half of the pseudopath. We then have to impose an
+# ordering on the potential test files found (ick! - TODO: better way?) before
+# passing it off to `dotest`
+for arg in $@; do
+
+  if [ -f "$arg" ]; then
+
+     dotest arg
+
+  elif [ -d "${TESTDIR}/$arg" ]
+
+    for testfile in $(find . -type f
+    \( -path "./$suite/*.in" -o -path "./$suite/in/*" \) -print); do
+      dotest testfile
+    done
+
+  elif [ -d "${TESTDIR}/$(dirname $arg)" ] &&
+       [ -f "${TESTDIR}/$(dirname $arg)/$(basename $arg).in" ] ||
+       [ -f "${TESTDIR}/$(dirname $arg)/in/$(basename $arg)" ]
+
+       if [ -f "${TESTDIR}/$(dirname $arg)/$(basename $arg).in" ]; then
+         dotest "${TESTDIR}/$(dirname $arg)/$(basename $arg).in"
+       else
+         dotest "${TESTDIR}/$(dirname $arg)/in/$(basename $arg)"
+       fi
+
+  else
+
+    error "can't figure out what to do with $arg"
+
+  fi
+
+done
+
+# Wrapping Up
+# -----------
+#
+# Standard case finishing action
+if ! $quiet; then
+  echo "Finished"
+
+  cat "${SANDBOXDIR}/results"
+
+  if [ $failcount -eq 0 ]; then
+      ppass "\n\n${testcount} tests, ${failcount} failures\n"
+  else
+      pfail "\n\n${testcount} tests, ${failcount} failures\n"
+  fi
+fi
+
+exit $failcount
