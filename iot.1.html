@@ -103,7 +103,7 @@
 
 <p>In order to run tests, simply issue the <code>iot</code> command from within the project. By default <code>iot</code> tries to run from the <code>git</code> or <code>hg</code> root, defaulting to the current working directory (<code>--rootdir</code> or <var>ROOTDIR</var> can override this behavior). <code>iot</code> expects the name of a program to test, followed to one or more test suites. This program name is <em>not</em> a path to the file, it is simply the name of the file located in the <var>ROOTDIR</var>. By default, <code>iot</code> runs the program as <code>./program</code>, in order to change this behavior pass in a <code>--command</code> when calling <code>iot</code>. <code>iot</code> runs all the tests in the suites it is given, exiting with the number of tests failed and printing to <em>stdout</em> the failure when its is completed running.</p>
 
-<p>As an alternative to running an entire suite <code>iot</code> can be called with a specific test. This is may be the direct path to the test file, or alternatively a <em>pseudo</em> path which is of the form 'suite_name/test_name'. This will find an input file in the given suite (i.e. either a '.in' file or a 'in/*' file) which is named with 'test_name'.</p>
+<p>As an alternative to running an entire suite <code>iot</code> can be called with a specific test. This is a <em>pseudo</em> path which is of the form 'suite_name/test_name'. This will find an input file in the given suite (i.e. either a '.in' file or a 'in/*' file) which is named with 'test_name'.</p>
 
 <p>There are several different modes from running <code>iot</code>: these include verbose mode (<code>--verbose</code>) which prints longer diagnostic messages while running the tests, immediate mode (<code>--immediate</code>) which immediately prints full error diffs after every failure and 'sudden death' mode (<code>--sudden-death</code>) which stops testing files in a suite directly following the first error. More options for modes are detailed in the <a href="#OPTIONS" title="OPTIONS" data-bare-link="true">OPTIONS</a> section.</p>
 
@@ -133,6 +133,9 @@ traditional minimal RSpec format.</p></dd>
   information regarding the failed test case.</p></dd>
 <dt><code>-q</code>, <code>--quiet</code></dt><dd><p>Don't print any output, just return an exit code signaling pass or fail.</p></dd>
 <dt><code>-u</code>, <code>--unified</code></dt><dd><p>Use unified diffs as opposed to the standard failure message.</p></dd>
+<dt><code>--safe</code>, <code>--copy</code>, <code>--concurrent</code></dt><dd><p>  Copy the source code of the file on start up and test the copied version,
+  making it so that it's safe to edit the original version while testing is
+  occurring.</p></dd>
 </dl>
 
 

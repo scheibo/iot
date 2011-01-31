@@ -81,6 +81,7 @@ other than a space after the comment.</p>
 <span class="c">#/    -x, --sudden-death                 stop after the first failed test</span>
 <span class="c">#/    -q, --quiet                        test and return exit code, no output</span>
 <span class="c">#/    -u, --unified                      use a unified diff for fail output</span>
+<span class="c">#/    --safe, --copy                     copy the source to allow for editting</span>
 
 </pre></div></td></tr><tr><td class=docs>
 
@@ -178,17 +179,12 @@ exceptional cases, so they all start out as false unless changed by the
 user.</p>
 
 </td><td class=code><div class=highlight><pre>
-<span class="nv">SANDBOXDIR</span><span class="o">=</span>
-<span class="nv">TESTDIR</span><span class="o">=</span>
-<span class="nv">ROOTDIR</span><span class="o">=</span>
-<span class="nv">COMMAND</span><span class="o">=</span>
 <span class="nv">immediate</span><span class="o">=</span><span class="nb">false</span>
 <span class="nv">verbose</span><span class="o">=</span><span class="nb">false</span>
 <span class="nv">sudden_death</span><span class="o">=</span><span class="nb">false</span>
 <span class="nv">quiet</span><span class="o">=</span><span class="nb">false</span>
 <span class="nv">unified</span><span class="o">=</span><span class="nb">false</span>
-
-<span class="nb">test</span>
+<span class="nv">safe</span><span class="o">=</span><span class="nb">false</span>
 
 </pre></div></td></tr><tr><td class=docs>
 
@@ -230,6 +226,7 @@ screen real estate here.</p>
     -v|-vv|--verbose<span class="o">)</span>           <span class="nv">verbose</span><span class="o">=</span><span class="nb">true</span>;          <span class="nb">shift</span>   ;;
     -q|--quiet|--silent<span class="o">)</span>        <span class="nv">quiet</span><span class="o">=</span><span class="nb">true</span>;            <span class="nb">shift</span>   ;;
     -u|--unified<span class="o">)</span>               <span class="nv">unified</span><span class="o">=</span><span class="nb">true</span>;          <span class="nb">shift</span>   ;;
+    --copy|--safe|--concurrent<span class="o">)</span> <span class="nv">safe</span><span class="o">=</span><span class="nb">true</span>;             <span class="nb">shift</span>   ;;
     -x|--sudden-death|--sudden_death|--suddendeath<span class="o">)</span>
                                 <span class="nv">sudden_death</span><span class="o">=</span><span class="nb">true</span>;     <span class="nb">shift</span>   ;;
 
@@ -315,19 +312,181 @@ will still be able to find the correct files.</p>
 <p>Last tiny bit of argument parsing. The first argument to iot is the test
 file and the rest of the options denote suites or tests to run to run.</p>
 
+<p>The safe option copies the entire source code of the program and is thus
+likely to be slow, but its the only way to safely be able to concurrently
+edit the program while we're testing it. Using <code>rsync(1)</code> here might be a
+better idea if we're trying to do some autotesting-like behavior.</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="o">[[</span> -f <span class="s2">&quot;${ROOTDIR}/${1}&quot;</span> <span class="o">]]</span> <span class="o">||</span> error <span class="s2">&quot;expects program to test as argument&quot;</span>
-<span class="nv">PROGNAME</span><span class="o">=</span><span class="s2">&quot;${ROOTDIR}/${1}&quot;</span>
+
+<span class="k">if</span> <span class="nv">$safe</span>; <span class="k">then</span>
+<span class="k">  </span>cp <span class="s2">&quot;${ROOTDIR}/${1}&quot;</span> <span class="s2">&quot;${SANDBOXDIR}/program&quot;</span>
+  <span class="nv">PROGNAME</span><span class="o">=</span><span class="s2">&quot;${SANDBOXDIR}/program&quot;</span>
+<span class="k">else</span>
+<span class="k">  </span><span class="nv">PROGNAME</span><span class="o">=</span><span class="s2">&quot;${ROOTDIR}/${1}&quot;</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>We a place to concatenate our error messages that build up, so we create a
+<code>results</code> file to append to. In order to avoid collisions with test names
+we'll stick on our pid as well. We're also going to create an <code>immediate</code>
+results file as well, which will kind of act like a buffer to <code>results</code>.</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">results</span><span class="o">=</span><span class="s2">&quot;${SANDBOXDIR}/iot-results-$$&quot;</span>
+<span class="nv">immediate_results</span><span class="o">=</span><span class="s2">&quot;${SANDBOXDIR}/iot-immediate-$$&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 
 <h2>Testing Function</h2>
 
-<p>Here lies the heart of the code</p>
+<p>Here lies the heart of the code. The control flow is broken up into several
+subroutines that all share the same variables (I guess that's one benefit of
+the shell's unscoped variables?). This seperation of the code into logical
+units is purely for convenience and presentation.</p>
+
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>The first step in testing a given program is to determine where it's
+expected out and error files would be located. <code>testfile</code>, <code>suite</code> and
+<code>location</code> are all passed to <code>dotest</code> (the main testing function) and
+<code>get_locations</code> utilizes these arguments to figure out where the expect
+files are. If the <code>location</code> passed to <code>dotest</code> is "top" then we just check
+in the top level of the suite, otherwise we delve into the subdirectories.
+<em>Note:</em> these expect files may not exist - we're just trying to find out
+where they would be <em>if</em> they did exist.</p>
+
+</td><td class=code><div class=highlight><pre>
+get_locations<span class="o">()</span> <span class="o">{</span>
+  <span class="nv">testname</span><span class="o">=</span><span class="s2">&quot;$(basename $testfile)&quot;</span>
+  <span class="nv">testname</span><span class="o">=</span><span class="s2">&quot;${testname%%.in}&quot;</span>
+
+  <span class="k">if</span> <span class="s2">&quot;$location&quot;</span> <span class="o">=</span> <span class="s2">&quot;top&quot;</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">expect_out</span><span class="o">=</span><span class="s2">&quot;${suite}/${testname}.out&quot;</span>
+    <span class="nv">expect_err</span><span class="o">=</span><span class="s2">&quot;${suite}/${testname}.err&quot;</span>
+  <span class="k">else</span> <span class="c"># &quot;in&quot;</span>
+    <span class="nv">expect_out</span><span class="o">=</span><span class="s2">&quot;${suite}/out/${testname}&quot;</span>
+    <span class="nv">expect_err</span><span class="o">=</span><span class="s2">&quot;${suite}/err/${testname}&quot;</span>
+  <span class="k">fi</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>The next step is to actually run the program with the test as input, saving
+the output streams in our <code>SANDBOXDIR</code>. <code>eval</code> shows it's ugly face here,
+but if the <code>COMMAND</code> that was passed in contains addition options (like
+<code>valgrind --leak-check=yes</code>, or something of that sort) then <code>eval</code> is
+necessary.</p>
+
+</td><td class=code><div class=highlight><pre>
+run_test<span class="o">()</span> <span class="o">{</span>
+  <span class="nv">actual_out</span><span class="o">=</span><span class="s2">&quot;${SANDBOXDIR}/${testname}.out&quot;</span>
+  <span class="nv">actual_err</span><span class="o">=</span><span class="s2">&quot;${SANDBOXDIR}/${testname}.err&quot;</span>
+
+  <span class="k">if</span> <span class="o">[</span> <span class="k">${</span><span class="nv">COMMAND</span><span class="p">:+1</span><span class="k">}</span> -eq 1 <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">eval</span> <span class="k">${</span><span class="nv">COMMAND</span><span class="k">}</span> <span class="nv">$PROGNAME</span> &lt; <span class="nv">$testfile</span> &gt; <span class="nv">$actual_out</span> 2&gt; <span class="nv">$actual_err</span>
+  <span class="k">elif</span> <span class="o">[</span> -x <span class="nv">$PROGNAME</span> <span class="o">]</span>; <span class="k">then</span>
+    <span class="s2">&quot;./$PROGNAME&quot;</span>  &lt; <span class="nv">$testfile</span> &gt; <span class="nv">$actual_out</span> 2&gt; <span class="nv">$actual_err</span>
+  <span class="k">else</span>
+<span class="k">    </span>error <span class="s2">&quot;$PROGNAME is not executable, cannot run tests&quot;</span>
+  <span class="k">fi</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Now we need to actually perform the <code>diff</code>. Since we need to possibly
+compare both out and error streams we need to make a 'combined' file that
+holds both of these appended to each other, provided the expect files exist.
+<code>dotest</code> will check the exit status of this which in turn will be the exit
+value of the <code>diff</code>.</p>
+
+</td><td class=code><div class=highlight><pre>
+perform_diff<span class="o">()</span> <span class="o">{</span>
+  <span class="nv">combined_expect</span><span class="o">=</span><span class="s2">&quot;${SANDBOXDIR}/${testname}.combined.expect&quot;</span>
+  <span class="nv">combined_result</span><span class="o">=</span><span class="s2">&quot;${SANDBOXDIR}/${testname}.combined.result&quot;</span>
+
+  <span class="o">[[</span> -f <span class="s2">&quot;$expect_out&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> cat <span class="s2">&quot;$expect_out&quot;</span> &gt;&gt; combined_expect
+  <span class="o">[[</span> -f <span class="s2">&quot;$expect_err&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> cat <span class="s2">&quot;$expect_err&quot;</span> &gt;&gt; combined_expect
+  cat <span class="s2">&quot;$actual_out&quot;</span> <span class="s2">&quot;$actual_err&quot;</span> &gt;&gt; combined_result
+
+  diff <span class="nv">$combined_expect</span> <span class="nv">$combined_result</span> &gt;/dev/null 2&gt;&amp;1
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Very straightforward chunk of code for the passing and failing message s- we
+simply print a different message depending on whether or not we've been
+passed the option <code>--verbose</code> or not.</p>
+
+</td><td class=code><div class=highlight><pre>
+passing_message<span class="o">()</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="nv">$verbose</span>; <span class="k">then</span>
+<span class="k">    </span>ppass <span class="sb">`</span>verbose_passmsg <span class="nv">$testfile</span> <span class="nv">$count</span><span class="sb">`</span>
+  <span class="k">else</span>
+<span class="k">    </span>ppass <span class="sb">`</span>passmsg <span class="nv">$testfile</span> <span class="nv">$count</span><span class="sb">`</span>
+  <span class="k">fi</span>
+<span class="o">}</span>
+
+failing_message<span class="o">()</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="nv">$verbose</span>; <span class="k">then</span>
+<span class="k">     </span>ppass <span class="sb">`</span>verbose_failmsg <span class="nv">$testfile</span> <span class="nv">$count</span><span class="sb">`</span>
+   <span class="k">else</span>
+<span class="k">     </span>ppass <span class="sb">`</span>failmsg <span class="nv">$testfile</span> <span class="nv">$count</span><span class="sb">`</span>
+   <span class="k">fi</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>The code to build up the result and possibly display it.</p>
+
+</td><td class=code><div class=highlight><pre>
+failing_case<span class="o">()</span> <span class="o">{</span>
+  failing_message
+
+  <span class="nb">printf</span> <span class="s2">&quot;\n${failcount}) ${RED}${suite}/${testname}${RESET}\n&quot;</span> &gt;&gt;<span class="s2">&quot;$immediate&quot;</span>
+
+  <span class="c">#BUILD THE MESSAGE: TODO</span>
+
+  sed <span class="s1">&#39;s/^/    /g&#39;</span> <span class="nv">$immediate</span> &gt;&gt; <span class="nv">$results</span>
+
+  <span class="k">if</span> <span class="nv">$immediate</span> <span class="k">then</span>;
+    sed <span class="s1">&#39;s/^/    /g&#39;</span> <span class="nv">$immediate</span>
+  <span class="k">elif</span> <span class="nv">$suddendeath</span>; <span class="k">then</span>
+<span class="k">    </span>cat <span class="nv">$results</span> <span class="o">&amp;&amp;</span> <span class="nb">exit </span>1
+  <span class="k">fi</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Here's the function that is composed of all the above subroutines. We're
+passed <code>testfile</code>, <code>suite</code> and <code>location</code> and then we call the respective
+subs to do all the work. We make sure we check the <code>quiet</code> flag so that we
+don't output anything if the flag is set.</p>
 
 </td><td class=code><div class=highlight><pre>
 dotest<span class="o">()</span> <span class="o">{</span>
-  <span class="nv">testfile</span><span class="o">=</span><span class="nv">$1</span>;
+  <span class="nv">testfile</span><span class="o">=</span><span class="nv">$1</span>; <span class="nv">suite</span><span class="o">=</span><span class="nv">$2</span>; <span class="nv">location</span><span class="o">=</span><span class="nv">$3</span>
+
+  get_locations
+  run_test
+  perform_diff
+
+  <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> -eq 0 <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    if</span> ! <span class="nv">$quiet</span>; <span class="k">then</span>
+<span class="k">      </span>passing_message
+    <span class="k">fi</span>
+<span class="k">  else</span>
+<span class="k">    </span><span class="nv">failcount</span><span class="o">=</span><span class="sb">`</span>expr <span class="nv">$failcount</span> + 1<span class="sb">`</span>
+    <span class="k">if</span> ! <span class="nv">$quiet</span>; <span class="k">then</span>
+<span class="k">      </span>failing_case
+    <span class="k">fi</span>
+<span class="k">  fi</span>
+
+<span class="k">  </span><span class="nv">testcount</span><span class="o">=</span><span class="sb">`</span>expr <span class="nv">$testcount</span> + 1<span class="sb">`</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -365,19 +524,12 @@ chatty 'Started' message</p>
 </pre></div></td></tr><tr><td class=docs>
 
 <p>We're going to loop through everything left standing on the command line and
-try to figure out what type of argument we have (path to test, pseudo path,
-or entire test suite), ultimately passing each test file to <code>dotest</code></p>
+try to figure out what type of argument we have (pseudo path or entire test
+suite), ultimately passing each test file to <code>dotest</code> with either a 'top' or
+an 'in' argument signalling to <code>dotest</code> where it should look for expected
+output files.</p>
 
-<p>The first case is that we're given a file. We're not going to touch this
-file name in any way - i.e. we're not going assume it's relative to the
-<code>ROOTDIR</code>. Why do we have this behavior? It's a judgement call, but I can
-see myself using tab completion to get the full path any. Or something. If
-you want logical behavior use the 'pseudo' path to an individual test. Also
-note that here we're testing <code>-f</code> instead or '-e' because we don't want any
-directories. This is a <em>special</em> case, purely for development cases when you
-want to run a specific file.</p>
-
-<p>The next case (in order of increasing complication) is the case where we
+<p>The first case (in order of increasing complication) is the case where we
 we're given a suite - in that case we're given a directory name and we just
 run the <code>dotest</code> function on each test file in that directory.</p>
 
@@ -392,25 +544,25 @@ passing it off to <code>dotest</code></p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">for </span>arg in <span class="nv">$@</span>; <span class="k">do</span>
 
-<span class="k">  if</span> <span class="o">[</span> -f <span class="s2">&quot;$arg&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">  if</span> <span class="o">[</span> -d <span class="s2">&quot;${TESTDIR}/$arg&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 
-<span class="k">     </span>dotest arg
+<span class="k">    for </span>file in <span class="k">$(</span>find <span class="k">${</span><span class="nv">TESTDIR</span><span class="k">}</span> -type f -path <span class="s2">&quot;${TESTDIR}/$arg/*.in&quot;</span><span class="k">)</span>; <span class="k">do</span>
+<span class="k">      </span>dotest file <span class="s2">&quot;${TESTDIR}/$arg&quot;</span> <span class="s2">&quot;top&quot;</span>
+    <span class="k">done</span>
 
-  <span class="k">elif</span> <span class="o">[</span> -d <span class="s2">&quot;${TESTDIR}/$arg&quot;</span> <span class="o">]</span>
-
-    <span class="k">for </span>testfile in <span class="k">$(</span>find . -type f
-    <span class="se">\(</span> -path <span class="s2">&quot;./$suite/*.in&quot;</span> -o -path <span class="s2">&quot;./$suite/in/*&quot;</span> <span class="se">\)</span> -print<span class="k">)</span>; <span class="k">do</span>
-<span class="k">      </span>dotest testfile
+<span class="k">    for </span>file in <span class="k">$(</span>find <span class="k">${</span><span class="nv">TESTDIR</span><span class="k">}</span> -type f -path <span class="s2">&quot;${TESTDIR}/$arg/in/*&quot;</span><span class="k">)</span>; <span class="k">do</span>
+<span class="k">      </span>dotest file <span class="s2">&quot;${TESTDIR}/$arg&quot;</span> <span class="s2">&quot;in&quot;</span>
     <span class="k">done</span>
 
 <span class="k">  elif</span> <span class="o">[</span> -d <span class="s2">&quot;${TESTDIR}/$(dirname $arg)&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span>
        <span class="o">[</span> -f <span class="s2">&quot;${TESTDIR}/$(dirname $arg)/$(basename $arg).in&quot;</span> <span class="o">]</span> <span class="o">||</span>
-       <span class="o">[</span> -f <span class="s2">&quot;${TESTDIR}/$(dirname $arg)/in/$(basename $arg)&quot;</span> <span class="o">]</span>
+       <span class="o">[</span> -f <span class="s2">&quot;${TESTDIR}/$(dirname $arg)/in/$(basename $arg)&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 
-       <span class="k">if</span> <span class="o">[</span> -f <span class="s2">&quot;${TESTDIR}/$(dirname $arg)/$(basename $arg).in&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">         </span>dotest <span class="s2">&quot;${TESTDIR}/$(dirname $arg)/$(basename $arg).in&quot;</span>
+<span class="k">       </span><span class="nv">suite</span><span class="o">=</span><span class="s2">&quot;${TESTDIR}/$(dirname $arg)&quot;</span>
+       <span class="k">if</span> <span class="o">[</span> -f <span class="s2">&quot;$suite/$(basename $arg).in&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">         </span>dotest <span class="s2">&quot;$suite/$(basename $arg).in&quot;</span> suite <span class="s2">&quot;top&quot;</span>
        <span class="k">else</span>
-<span class="k">         </span>dotest <span class="s2">&quot;${TESTDIR}/$(dirname $arg)/in/$(basename $arg)&quot;</span>
+<span class="k">         </span>dotest <span class="s2">&quot;$suite/in/$(basename $arg)&quot;</span> suite <span class="s2">&quot;in&quot;</span>
        <span class="k">fi</span>
 
 <span class="k">  else</span>
@@ -425,15 +577,21 @@ passing it off to <code>dotest</code></p>
 
 <h2>Wrapping Up</h2>
 
-<p>Standard case finishing action</p>
+<p>Standard case finishing action (i.e. we didn't terminate early thanks to
+<code>--immediate</code> or <code>--sudden-death</code>) - we simply display the results and the
+statistics (passes vs. failures). We don't display the results when
+immediate is set since they've already all been shown. The results are
+already conveniently indented from when they were created.</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> ! <span class="nv">$quiet</span>; <span class="k">then</span>
 <span class="k">  </span><span class="nb">echo</span> <span class="s2">&quot;Finished&quot;</span>
 
-  cat <span class="s2">&quot;${SANDBOXDIR}/results&quot;</span>
+  <span class="k">if</span> ! <span class="nv">$immediate</span>; <span class="k">then</span>
+<span class="k">    </span>cat <span class="nv">$results</span>
+  <span class="k">fi</span>
 
-  <span class="k">if</span> <span class="o">[</span> <span class="nv">$failcount</span> -eq 0 <span class="o">]</span>; <span class="k">then</span>
+<span class="k">  if</span> <span class="o">[</span> <span class="nv">$failcount</span> -eq 0 <span class="o">]</span>; <span class="k">then</span>
 <span class="k">      </span>ppass <span class="s2">&quot;\n\n${testcount} tests, ${failcount} failures\n&quot;</span>
   <span class="k">else</span>
 <span class="k">      </span>pfail <span class="s2">&quot;\n\n${testcount} tests, ${failcount} failures\n&quot;</span>
@@ -441,6 +599,16 @@ passing it off to <code>dotest</code></p>
 <span class="k">fi</span>
 
 <span class="nb">exit</span> <span class="nv">$failcount</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<h2>Copyright</h2>
+
+<p>Copyright (C) <a href="http://scheibo.com/about">Kirk Scheibelhut</a><br />
+This is Free Software distributed under the MIT license.</p>
+
+</td><td class=code><div class=highlight><pre>
+:
 
 </td><td class=code><div class=highlight><pre>
 </pre></div></td></tr><tr><td class=docs>
