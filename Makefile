@@ -1,6 +1,6 @@
 rev = $(shell git rev-parse --short HEAD |  tr -d "\n")
 pages:
-	shocco -t iot iot > ../index.html
+	shocco -t iot iot.sh > ../index.html
 	ronn -br5 --organization='SCHEIBO' --manual='iot Manual' man/*.ronn
 	cp man/*.html ..
 	git checkout gh-pages

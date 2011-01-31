@@ -101,7 +101,7 @@
 
 <p><code>iot</code> can handle expected messages for both <em>stdout</em> and/or <em>stderr</em>, and either case can be excluded if you do not care about the output from a given stream on a give test. Unless you're using a custom matcher, at least one of these expect files needs to be present, as something needs to be passed to <code>diff</code>. One common trick is that if you require one of the streams to be empty, supply a blank file of that type (i.e. if you want to ensure there's no output on <em>stderr</em> supply a blank 'err' file for the given test).</p>
 
-<p>In order to run tests, simply issue the <code>iot</code> command from within the project. By default <code>iot</code> tries to run from the <code>git</code> or <code>hg</code> root, defaulting to the current working directory (<code>--rootdir</code> or <var>ROOTDIR</var> can override this behavior). <code>iot</code> expects the name of a program to test, followed to one or more test suites. By default, <code>iot</code> runs the program as <code>./program</code>, in order to change this behavior pass in a <code>--command</code> when calling <code>iot</code>. <code>iot</code> runs all the tests in the suites it is given, exiting with the number of tests failed and printing to <em>stdout</em> the failure when its is completed running.</p>
+<p>In order to run tests, simply issue the <code>iot</code> command from within the project. By default <code>iot</code> tries to run from the <code>git</code> or <code>hg</code> root, defaulting to the current working directory (<code>--rootdir</code> or <var>ROOTDIR</var> can override this behavior). <code>iot</code> expects the name of a program to test, followed to one or more test suites. This program name is <em>not</em> a path to the file, it is simply the name of the file located in the <var>ROOTDIR</var>. By default, <code>iot</code> runs the program as <code>./program</code>, in order to change this behavior pass in a <code>--command</code> when calling <code>iot</code>. <code>iot</code> runs all the tests in the suites it is given, exiting with the number of tests failed and printing to <em>stdout</em> the failure when its is completed running.</p>
 
 <p>As an alternative to running an entire suite <code>iot</code> can be called with a specific test. This is may be the direct path to the test file, or alternatively a <em>pseudo</em> path which is of the form 'suite_name/test_name'. This will find an input file in the given suite (i.e. either a '.in' file or a 'in/*' file) which is named with 'test_name'.</p>
 
@@ -113,7 +113,7 @@
 set by via the [ENVIRONMENT][].</p>
 
 <dl>
-<dt><code>-s</code>, <code>--sandboxdir</code>, <code>--sandboxdir</code>=<var>directory</var>, <code>--tempdir</code>, <code>--tempdir</code>=<var>directory</var></dt><dd><p>The directory to store all of <code>iot</code>'s temporary files.</p></dd>
+<dt><code>-s</code>, <code>--sandboxdir</code>, <code>--sandboxdir</code>=<var>directory</var></dt><dd><p>The directory to store all of <code>iot</code>'s temporary files.</p></dd>
 <dt><code>-t</code>, <code>--testdir</code>, <code>--testdir</code>=<var>directory</var></dt><dd><p>The name of the directory that stores the tests. Defaults to '<var>ROOTDIR</var>/tests'</p></dd>
 <dt><code>-r</code>, <code>--rootdir</code>,<code>--rootdir</code>=<var>directory</var></dt><dd><p>The directory which contains the program to be tested.</p></dd>
 <dt><code>-c</code>, <code>--command</code>, <code>--command</code>=<var>file</var></dt><dd><p>Use the given command to execute the <var>program</var> which is being tested
@@ -132,7 +132,7 @@ traditional minimal RSpec format.</p></dd>
 <dt><code>-x</code>, <code>--sudden-death</code></dt><dd><p>  Stop testing after the first failed test. Immediately exit and print
   information regarding the failed test case.</p></dd>
 <dt><code>-q</code>, <code>--quiet</code></dt><dd><p>Don't print any output, just return an exit code signaling pass or fail.</p></dd>
-<dt><code>-u</code>, `--unified'</dt><dd><p>Use unified diffs as opposed to the standard failure message.</p></dd>
+<dt><code>-u</code>, <code>--unified</code></dt><dd><p>Use unified diffs as opposed to the standard failure message.</p></dd>
 </dl>
 
 

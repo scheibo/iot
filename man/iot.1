@@ -35,7 +35,7 @@ The most straightforward set up of \fBiot\fR involves creating a directory named
 \fBiot\fR can handle expected messages for both \fIstdout\fR and/or \fIstderr\fR, and either case can be excluded if you do not care about the output from a given stream on a give test\. Unless you\'re using a custom matcher, at least one of these expect files needs to be present, as something needs to be passed to \fBdiff\fR\. One common trick is that if you require one of the streams to be empty, supply a blank file of that type (i\.e\. if you want to ensure there\'s no output on \fIstderr\fR supply a blank \'err\' file for the given test)\.
 .
 .P
-In order to run tests, simply issue the \fBiot\fR command from within the project\. By default \fBiot\fR tries to run from the \fBgit\fR or \fBhg\fR root, defaulting to the current working directory (\fB\-\-rootdir\fR or \fIROOTDIR\fR can override this behavior)\. \fBiot\fR expects the name of a program to test, followed to one or more test suites\. By default, \fBiot\fR runs the program as \fB\./program\fR, in order to change this behavior pass in a \fB\-\-command\fR when calling \fBiot\fR\. \fBiot\fR runs all the tests in the suites it is given, exiting with the number of tests failed and printing to \fIstdout\fR the failure when its is completed running\.
+In order to run tests, simply issue the \fBiot\fR command from within the project\. By default \fBiot\fR tries to run from the \fBgit\fR or \fBhg\fR root, defaulting to the current working directory (\fB\-\-rootdir\fR or \fIROOTDIR\fR can override this behavior)\. \fBiot\fR expects the name of a program to test, followed to one or more test suites\. This program name is \fInot\fR a path to the file, it is simply the name of the file located in the \fIROOTDIR\fR\. By default, \fBiot\fR runs the program as \fB\./program\fR, in order to change this behavior pass in a \fB\-\-command\fR when calling \fBiot\fR\. \fBiot\fR runs all the tests in the suites it is given, exiting with the number of tests failed and printing to \fIstdout\fR the failure when its is completed running\.
 .
 .P
 As an alternative to running an entire suite \fBiot\fR can be called with a specific test\. This is may be the direct path to the test file, or alternatively a \fIpseudo\fR path which is of the form \'suite_name/test_name\'\. This will find an input file in the given suite (i\.e\. either a \'\.in\' file or a \'in/*\' file) which is named with \'test_name\'\.
@@ -47,7 +47,7 @@ There are several different modes from running \fBiot\fR: these include verbose 
 The following elements specify directory or file preferences\. These values can also be set by via the [ENVIRONMENT][]\.
 .
 .TP
-\fB\-s\fR, \fB\-\-sandboxdir\fR, \fB\-\-sandboxdir\fR=\fIdirectory\fR, \fB\-\-tempdir\fR, \fB\-\-tempdir\fR=\fIdirectory\fR
+\fB\-s\fR, \fB\-\-sandboxdir\fR, \fB\-\-sandboxdir\fR=\fIdirectory\fR
 The directory to store all of \fBiot\fR\'s temporary files\.
 .
 .TP
@@ -86,7 +86,7 @@ Stop testing after the first failed test\. Immediately exit and print informatio
 Don\'t print any output, just return an exit code signaling pass or fail\.
 .
 .TP
-\fB\-u\fR, `\-\-unified\'
+\fB\-u\fR, \fB\-\-unified\fR
 Use unified diffs as opposed to the standard failure message\.
 .
 .SH "ENVIRONMENT_VARIABLES"
