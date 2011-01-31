@@ -106,7 +106,7 @@ verbose_failmsg() {
 # ------
 #
 # In order to change the terminal colors we're going to use tput as opposed to
-# escape codes (for fun!). We need to be sure to finish with a RESET every
+# escape codes (for fun!). We need to be sure to finish with a `RESET` every
 # time we change the color or else the color will continue to be used for the
 # rest of the output (or at least until it is changed again).
 RED=$(tput setaf 1)
@@ -155,9 +155,9 @@ unified=false
 # variables which strips away everything that matches a regex.
 #
 # This is kind of an ugly looking dense block, and I'm generally not a huge
-# fan of arbitrary aligning of various lines, but since option parsing is so
-# repetitive and the code's job is so self explanatory we can save some screen
-# real estate here.
+# fan of the arbitrary aligning of various lines, but since option parsing is
+# so repetitive and the code's job is so self explanatory we can save some
+# screen real estate here.
 while test $# -gt 0
 do
   case $1 in
