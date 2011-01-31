@@ -144,7 +144,7 @@ verbose_failmsg<span class="o">()</span> <span class="o">{</span>
 <h2>Colors</h2>
 
 <p>In order to change the terminal colors we're going to use tput as opposed to
-escape codes (for fun!). We need to be sure to finish with a RESET every
+escape codes (for fun!). We need to be sure to finish with a <code>RESET</code> every
 time we change the color or else the color will continue to be used for the
 rest of the output (or at least until it is changed again).</p>
 
@@ -204,9 +204,9 @@ the name, the only difficulty here is using the special syntax for shell
 variables which strips away everything that matches a regex.</p>
 
 <p>This is kind of an ugly looking dense block, and I'm generally not a huge
-fan of arbitrary aligning of various lines, but since option parsing is so
-repetitive and the code's job is so self explanatory we can save some screen
-real estate here.</p>
+fan of the arbitrary aligning of various lines, but since option parsing is
+so repetitive and the code's job is so self explanatory we can save some
+screen real estate here.</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">while </span><span class="nb">test</span> <span class="nv">$# </span>-gt 0
