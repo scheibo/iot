@@ -188,6 +188,8 @@ user.</p>
 <span class="nv">quiet</span><span class="o">=</span><span class="nb">false</span>
 <span class="nv">unified</span><span class="o">=</span><span class="nb">false</span>
 
+<span class="nb">test</span>
+
 </pre></div></td></tr><tr><td class=docs>
 
 <p>It's sometimes difficult to remember all the proper option names, so <code>iot</code>
@@ -302,8 +304,8 @@ will still be able to find the correct files.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[</span> <span class="k">${</span><span class="nv">ROOTDIR</span><span class="p">:+1</span><span class="k">}</span> -eq 1 <span class="o">]</span>; <span class="k">then</span>
 <span class="k">  </span><span class="nv">ROOTDIR</span><span class="o">=</span><span class="sb">`</span><span class="nb">pwd</span><span class="sb">`</span>
-  hg root &gt;&amp; <span class="s1">&#39;/dev/null&#39;</span> <span class="o">&amp;&amp;</span> <span class="nv">ROOTDIR</span><span class="o">=</span><span class="sb">`</span>hg root<span class="sb">`</span>
-  git rev-parse --show-toplevel &gt;&amp; <span class="s1">&#39;/dev/null&#39;</span> <span class="o">&amp;&amp;</span> <span class="nv">ROOTDIR</span><span class="o">=</span><span class="sb">`</span>git rev-parse --show-toplevel<span class="sb">`</span>
+  hg root 1&gt;/dev/null 2&gt;&amp;1 <span class="o">&amp;&amp;</span> <span class="nv">ROOTDIR</span><span class="o">=</span><span class="sb">`</span>hg root<span class="sb">`</span>
+  git rev-parse --show-toplevel 1&gt;/dev/null 2&gt;&amp;1 <span class="o">&amp;&amp;</span> <span class="nv">ROOTDIR</span><span class="o">=</span><span class="sb">`</span>git rev-parse --show-toplevel<span class="sb">`</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -317,8 +319,128 @@ file and the rest of the options denote suites or tests to run to run.</p>
 <span class="o">[[</span> -f <span class="s2">&quot;${ROOTDIR}/${1}&quot;</span> <span class="o">]]</span> <span class="o">||</span> error <span class="s2">&quot;expects program to test as argument&quot;</span>
 <span class="nv">PROGNAME</span><span class="o">=</span><span class="s2">&quot;${ROOTDIR}/${1}&quot;</span>
 
+</pre></div></td></tr><tr><td class=docs>
 
-dotest <span class="nv">$@</span>
+<h2>Testing Function</h2>
+
+<p>Here lies the heart of the code</p>
+
+</td><td class=code><div class=highlight><pre>
+dotest<span class="o">()</span> <span class="o">{</span>
+  <span class="nv">testfile</span><span class="o">=</span><span class="nv">$1</span>;
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<h2>Main Testing Loop</h2>
+
+<p>The default location we're going to be look for tests when resolving
+'pseudo' paths and suite names. The <code>:=' form is used here again, it's
+similar to the</code>||=` in Ruby.</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">default</span><span class="o">=</span><span class="s2">&quot;${ROOTDIR}/tests&quot;</span>
+: <span class="k">${</span><span class="nv">TESTDIR</span><span class="p">:=default</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>We keep track of two counter variables in our test loop - <code>testcount</code> and
+<code>failcount</code>. <code>testcount</code> keeps track of the number of tests run and
+<code>failcount</code> keeps track of the number of tests which have failed. These are
+mainly useful for the summary message at the end, but we also use failcount
+as our exit code.</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">testcount</span><span class="o">=</span>0
+<span class="nv">failcount</span><span class="o">=</span>0
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>If we're in quiet mode we just care about the exit code and don't need the
+chatty 'Started' message</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> ! <span class="nv">$quiet</span>; <span class="k">then </span><span class="nb">echo</span> <span class="s2">&quot;Started&quot;</span>; <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>We're going to loop through everything left standing on the command line and
+try to figure out what type of argument we have (path to test, pseudo path,
+or entire test suite), ultimately passing each test file to <code>dotest</code></p>
+
+<p>The first case is that we're given a file. We're not going to touch this
+file name in any way - i.e. we're not going assume it's relative to the
+<code>ROOTDIR</code>. Why do we have this behavior? It's a judgement call, but I can
+see myself using tab completion to get the full path any. Or something. If
+you want logical behavior use the 'pseudo' path to an individual test. Also
+note that here we're testing <code>-f</code> instead or '-e' because we don't want any
+directories. This is a <em>special</em> case, purely for development cases when you
+want to run a specific file.</p>
+
+<p>The next case (in order of increasing complication) is the case where we
+we're given a suite - in that case we're given a directory name and we just
+run the <code>dotest</code> function on each test file in that directory.</p>
+
+<p>The final case is the pseudo path - something of the form 'suite/path'. This
+kind of gets ugly. First we test of the suite directory even exists - we can
+leverage (abuse?) <code>dirname</code> to strip the suite name. We then check both
+styles for how test files can be defined, this time making use of <code>basename</code>
+to strip the other half of the pseudopath. We then have to impose an
+ordering on the potential test files found (ick! - TODO: better way?) before
+passing it off to <code>dotest</code></p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="k">for </span>arg in <span class="nv">$@</span>; <span class="k">do</span>
+
+<span class="k">  if</span> <span class="o">[</span> -f <span class="s2">&quot;$arg&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+
+<span class="k">     </span>dotest arg
+
+  <span class="k">elif</span> <span class="o">[</span> -d <span class="s2">&quot;${TESTDIR}/$arg&quot;</span> <span class="o">]</span>
+
+    <span class="k">for </span>testfile in <span class="k">$(</span>find . -type f
+    <span class="se">\(</span> -path <span class="s2">&quot;./$suite/*.in&quot;</span> -o -path <span class="s2">&quot;./$suite/in/*&quot;</span> <span class="se">\)</span> -print<span class="k">)</span>; <span class="k">do</span>
+<span class="k">      </span>dotest testfile
+    <span class="k">done</span>
+
+<span class="k">  elif</span> <span class="o">[</span> -d <span class="s2">&quot;${TESTDIR}/$(dirname $arg)&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span>
+       <span class="o">[</span> -f <span class="s2">&quot;${TESTDIR}/$(dirname $arg)/$(basename $arg).in&quot;</span> <span class="o">]</span> <span class="o">||</span>
+       <span class="o">[</span> -f <span class="s2">&quot;${TESTDIR}/$(dirname $arg)/in/$(basename $arg)&quot;</span> <span class="o">]</span>
+
+       <span class="k">if</span> <span class="o">[</span> -f <span class="s2">&quot;${TESTDIR}/$(dirname $arg)/$(basename $arg).in&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">         </span>dotest <span class="s2">&quot;${TESTDIR}/$(dirname $arg)/$(basename $arg).in&quot;</span>
+       <span class="k">else</span>
+<span class="k">         </span>dotest <span class="s2">&quot;${TESTDIR}/$(dirname $arg)/in/$(basename $arg)&quot;</span>
+       <span class="k">fi</span>
+
+<span class="k">  else</span>
+
+<span class="k">    </span>error <span class="s2">&quot;can&#39;t figure out what to do with $arg&quot;</span>
+
+  <span class="k">fi</span>
+
+<span class="k">done</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<h2>Wrapping Up</h2>
+
+<p>Standard case finishing action</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> ! <span class="nv">$quiet</span>; <span class="k">then</span>
+<span class="k">  </span><span class="nb">echo</span> <span class="s2">&quot;Finished&quot;</span>
+
+  cat <span class="s2">&quot;${SANDBOXDIR}/results&quot;</span>
+
+  <span class="k">if</span> <span class="o">[</span> <span class="nv">$failcount</span> -eq 0 <span class="o">]</span>; <span class="k">then</span>
+<span class="k">      </span>ppass <span class="s2">&quot;\n\n${testcount} tests, ${failcount} failures\n&quot;</span>
+  <span class="k">else</span>
+<span class="k">      </span>pfail <span class="s2">&quot;\n\n${testcount} tests, ${failcount} failures\n&quot;</span>
+  <span class="k">fi</span>
+<span class="k">fi</span>
+
+<span class="nb">exit</span> <span class="nv">$failcount</span>
 
 </td><td class=code><div class=highlight><pre>
 </pre></div></td></tr><tr><td class=docs>
