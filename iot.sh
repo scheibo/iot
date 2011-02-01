@@ -318,15 +318,28 @@ run_test() {
 # Now we need to actually perform the `diff`. Since we need to possibly
 # compare both out and error streams we need to make a 'combined' file that
 # holds both of these appended to each other, provided the expect files exist.
-# `dotest` will check the exit status of this which in turn will be the exit
-# value of the `diff`.
+# If neither a test or output file is provided we're going to throw an error
+# since it is likely a mistake by the user and not intentional (if the user
+# expects no output or errors he should provide empty err and out files to
+# make his intentions clear). `dotest` will check the exit status of this
+# which in turn will be the exit value of the `diff`.
 perform_diff() {
   combined_expect="${SANDBOXDIR}/${testname}.combined.expect"
   combined_result="${SANDBOXDIR}/${testname}.combined.result"
 
-  [[ -f "$expect_out" ]] && cat "$expect_out" >> combined_expect
-  [[ -f "$expect_err" ]] && cat "$expect_err" >> combined_expect
-  cat "$actual_out" "$actual_err" >> combined_result
+  if [ -f "$expect_out" ]; then
+    cat $expect_out >> $combined_expect
+    cat $actual_out >> $combined_result
+  fi
+
+  if [ -f "$expect_err" ]; then
+    cat $expect_err >> $combined_expect
+    cat $actual_err >> $combined_result
+  fi
+
+  if ! [ -f "$expect_out" ] && ! [ -f "expect_err" ]; then
+    error "no expected output files for $testname"
+  fi
 
   diff $combined_expect $combined_result >/dev/null 2>&1
 }
