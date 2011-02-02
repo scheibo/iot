@@ -105,7 +105,7 @@ like 125 might help, but that's just delaying the issue.</p>
 
 </td><td class=code><div class=highlight><pre>
 error<span class="o">()</span> <span class="o">{</span>
-  <span class="nb">printf</span> <span class="s2">&quot;$(basename $0): ${*}\n\n&quot;</span>
+  <span class="nb">printf</span> <span class="s2">&quot;$(basename $0): ${*}\n\n&quot;</span> &gt;&amp;2
   usage
   <span class="nb">exit </span>1
 <span class="o">}</span>
@@ -165,9 +165,9 @@ messages. They simply wrap their input in colors. Notice the conspicious use
 of <code>printf(1)</code> in all of this code without a <code>\n</code>.</p>
 
 </td><td class=code><div class=highlight><pre>
-ppass<span class="o">()</span> <span class="o">{</span> <span class="nb">printf</span> <span class="s2">&quot;${GREEN}${1}${RESET}&quot;</span>; <span class="o">}</span>
-pwarn<span class="o">()</span> <span class="o">{</span> <span class="nb">printf</span> <span class="s2">&quot;${YELLOW}${1}${RESET}&quot;</span>; <span class="o">}</span>
-pfail<span class="o">()</span> <span class="o">{</span> <span class="nb">printf</span> <span class="s2">&quot;${RED}${1}${RESET}&quot;</span>; <span class="o">}</span>
+ppass<span class="o">()</span> <span class="o">{</span> <span class="nb">printf</span> <span class="s2">&quot;${GREEN}${*}${RESET}&quot;</span>; <span class="o">}</span>
+pwarn<span class="o">()</span> <span class="o">{</span> <span class="nb">printf</span> <span class="s2">&quot;${YELLOW}${*}${RESET}&quot;</span>; <span class="o">}</span>
+pfail<span class="o">()</span> <span class="o">{</span> <span class="nb">printf</span> <span class="s2">&quot;${RED}${*}${RESET}&quot;</span>; <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 
@@ -403,19 +403,34 @@ run_test<span class="o">()</span> <span class="o">{</span>
 <p>Now we need to actually perform the <code>diff</code>. Since we need to possibly
 compare both out and error streams we need to make a 'combined' file that
 holds both of these appended to each other, provided the expect files exist.
-<code>dotest</code> will check the exit status of this which in turn will be the exit
-value of the <code>diff</code>.</p>
+If neither a test or output file is provided we're going to throw an error
+since it is likely a mistake by the user and not intentional (if the user
+expects no output or errors he should provide empty err and out files to
+make his intentions clear). <code>dotest</code> will check the exit status of this
+which in turn will be the exit value of the <code>diff</code>.</p>
 
 </td><td class=code><div class=highlight><pre>
 perform_diff<span class="o">()</span> <span class="o">{</span>
   <span class="nv">combined_expect</span><span class="o">=</span><span class="s2">&quot;${SANDBOXDIR}/${testname}.combined.expect&quot;</span>
   <span class="nv">combined_result</span><span class="o">=</span><span class="s2">&quot;${SANDBOXDIR}/${testname}.combined.result&quot;</span>
 
-  <span class="o">[[</span> -f <span class="s2">&quot;$expect_out&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> cat <span class="s2">&quot;$expect_out&quot;</span> &gt;&gt; combined_expect
-  <span class="o">[[</span> -f <span class="s2">&quot;$expect_err&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> cat <span class="s2">&quot;$expect_err&quot;</span> &gt;&gt; combined_expect
-  cat <span class="s2">&quot;$actual_out&quot;</span> <span class="s2">&quot;$actual_err&quot;</span> &gt;&gt; combined_result
+  <span class="k">if</span> <span class="o">[</span> -f <span class="s2">&quot;$expect_out&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>cat <span class="nv">$expect_out</span> &gt;&gt; <span class="nv">$combined_expect</span>
+    cat <span class="nv">$actual_out</span> &gt;&gt; <span class="nv">$function</span>
+    <span class="nv">out</span><span class="o">=</span><span class="nb">true</span>
+<span class="nb">  </span><span class="k">fi</span>
 
-  diff <span class="nv">$combined_expect</span> <span class="nv">$combined_result</span> &gt;/dev/null 2&gt;&amp;1
+<span class="k">  if</span> <span class="o">[</span> -f <span class="s2">&quot;$expect_err&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>cat <span class="nv">$expect_err</span> &gt;&gt; <span class="nv">$combined_expect</span>
+    cat <span class="nv">$actual_err</span> &gt;&gt; <span class="nv">$combined_result</span>
+    <span class="nv">err</span><span class="o">=</span><span class="nb">true</span>
+<span class="nb">  </span><span class="k">fi</span>
+
+<span class="k">  if</span> ! <span class="nv">$out</span> <span class="o">&amp;&amp;</span> ! <span class="nv">$err</span>; <span class="k">then</span>
+<span class="k">    </span>error <span class="s2">&quot;no expected output files for $testname&quot;</span>
+  <span class="k">fi</span>
+
+<span class="k">  </span>diff <span class="nv">$combined_expect</span> <span class="nv">$combined_result</span> &gt;/dev/null 2&gt;&amp;1
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -443,20 +458,52 @@ failing_message<span class="o">()</span> <span class="o">{</span>
 
 </pre></div></td></tr><tr><td class=docs>
 
-<p>The code to build up the result and possibly display it.</p>
+<p>Abstracted from the next function, <code>failing_case</code>, this function expects an
+<code>out_file</code> and a <code>err_file</code> and decides what format to print them in. It
+relies on <code>out</code> and <code>err</code> which were set in <code>perform_diff</code> and simply save
+having to test <code>[ -f &lt;file&gt; ]</code> multiple times. If we get just an <code>out_file</code>,
+we dont print the 'stdout:' line since it is implied. However, one we get an
+error stream in the mix we need to distinguish between the 2.</p>
+
+</td><td class=code><div class=highlight><pre>
+failing_output<span class="o">()</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="nv">$out</span> <span class="o">&amp;&amp;</span> ! <span class="nv">$err</span>; <span class="k">then</span>
+<span class="k">    </span>cat <span class="nv">$out_file</span> &gt;&gt; <span class="nv">$immediate</span>
+  <span class="k">elif</span> ! <span class="nv">$out</span> <span class="o">&amp;&amp;</span> <span class="nv">$err</span>; <span class="k">then</span>
+<span class="k">    </span>pwarn <span class="s2">&quot;stderr:\n&quot;</span> &gt;&gt; <span class="nv">$immediate</span>
+    cat <span class="nv">$err_file</span> &gt;&gt; <span class="nv">$immediate</span>
+  <span class="k">else</span>
+<span class="k">    </span>pwarn <span class="s2">&quot;stdout:\n&quot;</span> &gt;&gt; <span class="nv">$immediate</span>
+    cat <span class="nv">$out_file</span> &gt;&gt; <span class="nv">$immediate</span>
+    pwarn <span class="s2">&quot;stderr:\n&quot;</span> &gt;&gt; <span class="nv">$immediate</span>
+    cat <span class="nv">$err_file</span> &gt;&gt; <span class="nv">$immediate</span>
+  <span class="k">fi</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Most of the interesting stuff this function does was extrcacted to
+<code>failing_output</code>, but it's worth noting we are outputing everything to
+<code>immediate</code> until the end, where we then append it to the real <code>results</code>
+file. Also note we're adding in some spaces to indent our output.</p>
 
 </td><td class=code><div class=highlight><pre>
 failing_case<span class="o">()</span> <span class="o">{</span>
   failing_message
 
-  <span class="nb">printf</span> <span class="s2">&quot;\n${failcount}) ${RED}${suite}/${testname}${RESET}\n&quot;</span> &gt;&gt;<span class="s2">&quot;$immediate&quot;</span>
+  pfail <span class="s2">&quot;\n${failcount}) ${suite}/${testname}\n&quot;</span> &gt;&gt; <span class="nv">$immediate</span>
 
-  <span class="c">#BUILD THE MESSAGE: TODO</span>
+  pwarn <span class="s2">&quot;${BOLD}Expected:\n&quot;</span> &gt;&gt; <span class="nv">$immediate</span>
+  failing_output <span class="nv">$expect_out</span> <span class="nv">$expect_err</span>
 
-  sed <span class="s1">&#39;s/^/    /g&#39;</span> <span class="nv">$immediate</span> &gt;&gt; <span class="nv">$results</span>
+  pwarn <span class="s2">&quot;${BOLD}Received:\n&quot;</span> &gt;&gt; <span class="nv">$immediate</span>
+  failing_output <span class="nv">$actual_out</span> <span class="nv">$actual_err</span>
+
+  sed <span class="s1">&#39;s/^/    /g&#39;</span> <span class="nv">$immediate</span> &gt;&gt; <span class="nv">$immediate</span>
+  cat <span class="nv">$immediate</span> &gt;&gt; <span class="nv">$results</span>
 
   <span class="k">if</span> <span class="nv">$immediate</span> <span class="k">then</span>;
-    sed <span class="s1">&#39;s/^/    /g&#39;</span> <span class="nv">$immediate</span>
+    cat <span class="nv">$immediate</span>
   <span class="k">elif</span> <span class="nv">$suddendeath</span>; <span class="k">then</span>
 <span class="k">    </span>cat <span class="nv">$results</span> <span class="o">&amp;&amp;</span> <span class="nb">exit </span>1
   <span class="k">fi</span>
@@ -611,6 +658,7 @@ This is Free Software distributed under the MIT license.</p>
 
 </td><td class=code><div class=highlight><pre>
 :
+
 
 </td><td class=code><div class=highlight><pre>
 </pre></div></td></tr><tr><td class=docs>
