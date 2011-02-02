@@ -1,0 +1,12 @@
+Started
+F
+Finished
+
+	1) simple_fail/test
+	Expected:
+	oh hello
+
+	Received:
+	oh hell
+
+1 test(s), 1 failure(s)

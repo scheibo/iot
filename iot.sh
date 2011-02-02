@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # **iot** serves as a testing 'framework' for the times when you only care
 # that given a certain input, a certain output is produced. `iot` tries to be
 # a simple solution to creating and managing test suites in this limited
@@ -30,11 +30,6 @@
 # Usage
 # -----
 #
-# We include this line as a safety precaution -  it's important to exit
-# immediately if we run into any problems rather than potentially screwing
-# anything up.
-set -e
-
 # We're going to steal an idea from [rtomyako](https://github.com/rtomayko)'s
 # [shocco][] program by including the 'Usage' message as a comment and then
 # later doing some 'magic' to output as a help message. In order to get around
@@ -49,19 +44,19 @@ set -e
 #/ input files and compares the output to a set of expected output files.
 #/
 #/ Configuration options:
-#/    -s, --sandboxdir=<dir>  change the default temp directory
+#/    -s, --sandboxdir=<dir>             change the default temp directory
 #/    -t, --testdir=<dir>                change default test directory
 #/    -r, --rootdir=<dir>                change default root directory
 #/    -c, --command=<command>            use <command> to run the program
 #/    -m, --matcher=<file>               use the custom matchers in <file>
 #/
 #/ Mode options:
-#/    -i, --immediate                    immediately print diagnositc info
+#/    -i, --immediate                    immediately print diagnostic info
 #/    -v, --verbose                      more verbose failure program msgs
 #/    -x, --sudden-death                 stop after the first failed test
 #/    -q, --quiet                        test and return exit code, no output
 #/    -u, --unified                      use a unified diff for fail output
-#/    --safe, --copy                     copy the source to allow for editting
+#/    --safe, --copy                     copy the source to allow for editing
 
 # Our magic usage function, pretty much straight from [shocco][]. We parse our
 # own file for our comment leader and then print the stripped message.
@@ -75,7 +70,7 @@ usage() {
 # usually the fail count is the exit code). Changing status with something
 # like 125 might help, but that's just delaying the issue.
 error() {
-  printf "$(basename $0): ${*}\n\n" >&2
+  printf "$(basename $0): ${*}\n" >&2
   usage
   exit 1
 }
@@ -97,12 +92,12 @@ failmsg() { printf "F"; }
 verbose_passmsg() {
   test_name="${1##/*/}"
   test_name="${test_name%%.in}"
-  printf "Passed test: $test_name\n"
+  printf "Passed test: '${suite}/${test_name}'\n"
 }
 verbose_failmsg() {
   test_name="${1##/*/}"
   test_name="${test_name%%.in}"
-  printf "Failed test: $test_name\n"
+  printf "Failed test: '${suite}/${test_name}'\n"
 }
 
 # Colors
@@ -213,7 +208,7 @@ done
 # Here we perform a bit of a sanity check to make sure we're not using a
 # stupid location for our temp directory which would result in lots of
 # potentially nasty things happening.
-if [ -z "$SANDBOX" -o "$WORK" = "/" ]; then
+if [ -z "$SANDBOXDIR" -o "$SANDBOXDIR" = "/" ]; then
   error "could not create a temporary sandbox directory"
 fi
 
@@ -229,14 +224,14 @@ trap "rm -rf $SANDBOXDIR" 0
 # testing is. We first need to check if if `ROOTDIR` was already set by the
 # user through the `--rootdir` command line option. This leverages the
 # `${var:+val}` variable subsititution form which returns its value if
-# `ROOTDIR` is defined and not null.We start by defaulting to the current
+# `ROOTDIR` is defined and not null. We start by defaulting to the current
 # directory - in the most basic case `iot` will be run from the top level
 # directory. However, in order to provide more of a convenience for people
 # using source control, we'll also check if we're in a `hg` or `git`
 # repository, using the root of that repository as the root directory for the
 # script. This allows us to call the script anywhere in the project and it
 # will still be able to find the correct files.
-if [ ${ROOTDIR:+1} -eq 1 ]; then
+if [ -z "${ROOTDIR:+1}" ]; then
   ROOTDIR=`pwd`
   hg root 1>/dev/null 2>&1 && ROOTDIR=`hg root`
   git rev-parse --show-toplevel 1>/dev/null 2>&1 && ROOTDIR=`git rev-parse --show-toplevel`
@@ -260,6 +255,7 @@ if $safe; then
 else
   PROGNAME="${ROOTDIR}/${1}"
 fi
+shift
 
 # We a place to concatenate our error messages that build up, so we create a
 # `results` file to append to. In order to avoid collisions with test names
@@ -288,7 +284,7 @@ get_locations() {
   testname="$(basename $testfile)"
   testname="${testname%%.in}"
 
-  if "$location" = "top"; then
+  if [ "$location" = "top" ]; then
     expect_out="${suite}/${testname}.out"
     expect_err="${suite}/${testname}.err"
   else # "in"
@@ -306,12 +302,12 @@ run_test() {
   actual_out="${SANDBOXDIR}/${testname}.out"
   actual_err="${SANDBOXDIR}/${testname}.err"
 
-  if [ ${COMMAND:+1} -eq 1 ]; then
-    eval ${COMMAND} $PROGNAME < $testfile > $actual_out 2> $actual_err
+  if [ -n "${COMMAND:+1}" ]; then
+    eval "${COMMAND} $PROGNAME < $testfile > $actual_out 2> $actual_err"
   elif [ -x $PROGNAME ]; then
-    "./$PROGNAME"  < $testfile > $actual_out 2> $actual_err
+    eval "./${PROGNAME}  < $testfile > $actual_out 2> $actual_err"
   else
-    error "$PROGNAME is not executable, cannot run tests"
+    error "'$PROGNAME' is not executable, cannot run tests"
   fi
 }
 
@@ -329,7 +325,7 @@ perform_diff() {
 
   if [ -f "$expect_out" ]; then
     cat $expect_out >> $combined_expect
-    cat $actual_out >> $function
+    cat $actual_out >> $combined_result
     out=true
   fi
 
@@ -340,7 +336,7 @@ perform_diff() {
   fi
 
   if ! $out && ! $err; then
-    error "no expected output files for $testname"
+    error "no expected output or error files for ${suite}/${testname}"
   fi
 
   diff $combined_expect $combined_result >/dev/null 2>&1
@@ -372,17 +368,33 @@ failing_message() {
 # we dont print the 'stdout:' line since it is implied. However, one we get an
 # error stream in the mix we need to distinguish between the 2.
 failing_output() {
+  out_file=$1; err_file=$2
   if $out && ! $err; then
-    cat $out_file >> $immediate
+    cat $out_file >> $immediate_results
   elif ! $out && $err; then
-    pwarn "stderr:\n" >> $immediate
-    cat $err_file >> $immediate
+    pwarn "stderr:\n" >> $immediate_results
+    cat $err_file >> $immediate_results
   else
-    pwarn "stdout:\n" >> $immediate
-    cat $out_file >> $immediate
-    pwarn "stderr:\n" >> $immediate
-    cat $err_file >> $immediate
+    pwarn "stdout:\n" >> $immediate_results
+    cat $out_file >> $immediate_results
+    pwarn "stderr:\n" >> $immediate_results
+    cat $err_file >> $immediate_results
   fi
+}
+
+# TODO: need to test with matcher.
+failing_unified() {
+  if $out && ! $err; then
+     diff -u $expected_out $actual_out >> $immediate_results
+   elif ! $out && $err; then
+     pwarn "stderr:\n" >> $immediate_results
+     diff -u $expected_err $actual_err >> $immediate_results
+   else
+     pwarn "stdout:\n" >> $immediate_results
+     diff -u $expected_out $actual_out >> $immediate_results
+     pwarn "stderr:\n" >> $immediate_results
+     diff -u $expected_err $actual_err >> $immediate_results
+   fi
 }
 
 # Most of the interesting stuff this function does was extrcacted to
@@ -392,19 +404,23 @@ failing_output() {
 failing_case() {
   failing_message
 
-  pfail "\n${failcount}) ${suite}/${testname}\n" >> $immediate
+  if $unified; then
+    failing_unified
+  else
+    pfail "\n${failcount}) ${suite}/${testname}\n" >> $immediate_results
 
-  pwarn "${BOLD}Expected:\n" >> $immediate
-  failing_output $expect_out $expect_err
+    pwarn "${BOLD}Expected:\n" >> $immediate_results
+    failing_output $expect_out $expect_err
 
-  pwarn "${BOLD}Received:\n" >> $immediate
-  failing_output $actual_out $actual_err
+    pwarn "${BOLD}Received:\n" >> $immediate_results
+    failing_output $actual_out $actual_err
+  fi
 
-  sed 's/^/    /g' $immediate >> $immediate
-  cat $immediate >> $results
+  sed 's/^/ /g' $immediate_results >> $immediate_results
+  cat $immediate_results >> $results
 
   if $immediate; then
-    cat $immediate
+    cat $immediate_results
   elif $suddendeath; then
     cat $results && exit 1
   fi
@@ -442,7 +458,7 @@ dotest() {
 # 'pseudo' paths and suite names. The `:=` form is used here again, it's
 # similar to the `||=` in Ruby.
 default="${ROOTDIR}/tests"
-: ${TESTDIR:=default}
+: ${TESTDIR:=$default}
 
 # We keep track of two counter variables in our test loop - `testcount` and
 # `failcount`. `testcount` keeps track of the number of tests run and
@@ -478,11 +494,11 @@ for arg in $@; do
   if [ -d "${TESTDIR}/$arg" ]; then
 
     for file in $(find ${TESTDIR} -type f -path "${TESTDIR}/$arg/*.in"); do
-      dotest file "${TESTDIR}/$arg" "top"
+      dotest $file "${TESTDIR}/$arg" "top"
     done
 
     for file in $(find ${TESTDIR} -type f -path "${TESTDIR}/$arg/in/*"); do
-      dotest file "${TESTDIR}/$arg" "in"
+      dotest $file "${TESTDIR}/$arg" "in"
     done
 
   elif [ -d "${TESTDIR}/$(dirname $arg)" ] &&
@@ -498,7 +514,7 @@ for arg in $@; do
 
   else
 
-    error "can't figure out what to do with $arg"
+    error "can't figure out what to do with '$arg'"
 
   fi
 
@@ -520,9 +536,9 @@ if ! $quiet; then
   fi
 
   if [ $failcount -eq 0 ]; then
-      ppass "\n\n${testcount} tests, ${failcount} failures\n"
+      ppass "\n${testcount} test(s), ${failcount} failure(s)\n"
   else
-      pfail "\n\n${testcount} tests, ${failcount} failures\n"
+      pfail "\n${testcount} test(s), ${failcount} failure(s)\n"
   fi
 fi
 

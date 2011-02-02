@@ -1,1 +1,0 @@
-../iot --COMMAND='/bin/sh -x' fake fake-suite

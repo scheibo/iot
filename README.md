@@ -62,14 +62,14 @@ Or for failing cases:
 	....F......
 	Finished
 
-		1) list_suite/in/test_list.in
+	  1) list_suite/in/test_list.in
 		Expected:
 		apple, orange, banana
 
 		Received:
 		banana, banana, banana
 
-	11 tests, 1 failures
+	11 test(s), 1 failure(s)
 
 ## Custom Test Matchers
 

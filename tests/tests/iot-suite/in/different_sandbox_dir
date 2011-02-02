@@ -1,0 +1,1 @@
+mkdir '/tmp/my-iot-sandbox-dir' && ./iot -s '/tmp/my-iot-sandbox-dir' fake simple_pass

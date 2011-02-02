@@ -1,0 +1,1 @@
+./iot --command='/bin/sh' fake simple_pass
