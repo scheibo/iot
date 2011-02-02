@@ -1,2 +1,3 @@
 #!/bin/sh
-cat
+printf "$*"
+printf "$*" >&2

@@ -50,6 +50,6 @@ shocco:
 	shocco -t iot iot.sh > test.html
 
 test:
-	echo "TODO"
+	./iot --ROOTDIR='./tests' iot-runner iot-suite
 
 .PHONY: run install pages docs shocco clean test

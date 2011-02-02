@@ -1,2 +1,2 @@
 #!/bin/sh
-eval $*
+eval $(cat /dev/stdin)

@@ -75,7 +75,7 @@ usage() {
 # usually the fail count is the exit code). Changing status with something
 # like 125 might help, but that's just delaying the issue.
 error() {
-  printf "$(basename $0): ${*}\n\n"
+  printf "$(basename $0): ${*}\n\n" >&2
   usage
   exit 1
 }

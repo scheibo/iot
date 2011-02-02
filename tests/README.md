@@ -1,6 +1,6 @@
 # Testing iot
 
-*WARNING*: the following may make require alot of thinking before this makes sense.
+**WARNING**: the following may be somewhat of a 'mindfuck'
 
 `iot(1)` is tested by essentially running `iot` on itself (how very meta). However, since `iot` does not read from `stdin` this isn't quite possible, but we can come close by making use of a trivial sample program. If we look in the Makefile we can see that the `test` task is defined:
 
