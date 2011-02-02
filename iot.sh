@@ -121,9 +121,9 @@ RESET=$(tput sgr0)
 # There are helper functions for printing passing, warning and failing
 # messages. They simply wrap their input in colors. Notice the conspicious use
 # of `printf(1)` in all of this code without a `\n`.
-ppass() { printf "${GREEN}${1}${RESET}"; }
-pwarn() { printf "${YELLOW}${1}${RESET}"; }
-pfail() { printf "${RED}${1}${RESET}"; }
+ppass() { printf "${GREEN}${*}${RESET}"; }
+pwarn() { printf "${YELLOW}${*}${RESET}"; }
+pfail() { printf "${RED}${*}${RESET}"; }
 
 # Option Processing and Setup
 # ---------------------------
@@ -329,15 +329,17 @@ perform_diff() {
 
   if [ -f "$expect_out" ]; then
     cat $expect_out >> $combined_expect
-    cat $actual_out >> $combined_result
+    cat $actual_out >> $function
+    out=true
   fi
 
   if [ -f "$expect_err" ]; then
     cat $expect_err >> $combined_expect
     cat $actual_err >> $combined_result
+    err=true
   fi
 
-  if ! [ -f "$expect_out" ] && ! [ -f "expect_err" ]; then
+  if ! $out && ! $err; then
     error "no expected output files for $testname"
   fi
 
@@ -363,18 +365,46 @@ failing_message() {
    fi
 }
 
-# The code to build up the result and possibly display it.
+# Abstracted from the next function, `failing_case`, this function expects an
+# `out_file` and a `err_file` and decides what format to print them in. It
+# relies on `out` and `err` which were set in `perform_diff` and simply save
+# having to test `[ -f <file> ]` multiple times. If we get just an `out_file`,
+# we dont print the 'stdout:' line since it is implied. However, one we get an
+# error stream in the mix we need to distinguish between the 2.
+failing_output() {
+  if $out && ! $err; then
+    cat $out_file >> $immediate
+  elif ! $out && $err; then
+    pwarn "stderr:\n" >> $immediate
+    cat $err_file >> $immediate
+  else
+    pwarn "stdout:\n" >> $immediate
+    cat $out_file >> $immediate
+    pwarn "stderr:\n" >> $immediate
+    cat $err_file >> $immediate
+  fi
+}
+
+# Most of the interesting stuff this function does was extrcacted to
+# `failing_output`, but it's worth noting we are outputing everything to
+# `immediate` until the end, where we then append it to the real `results`
+# file. Also note we're adding in some spaces to indent our output.
 failing_case() {
   failing_message
 
-  printf "\n${failcount}) ${RED}${suite}/${testname}${RESET}\n" >>"$immediate"
+  pfail "\n${failcount}) ${suite}/${testname}\n" >> $immediate
 
-  #BUILD THE MESSAGE: TODO
+  pwarn "${BOLD}Expected:\n" >> $immediate
+  failing_output $expect_out $expect_err
 
-  sed 's/^/    /g' $immediate >> $results
+  pwarn "${BOLD}Received:\n" >> $immediate
+  failing_output $actual_out $actual_err
+
+  sed 's/^/    /g' $immediate >> $immediate
+  cat $immediate >> $results
 
   if $immediate then;
-    sed 's/^/    /g' $immediate
+    cat $immediate
   elif $suddendeath; then
     cat $results && exit 1
   fi

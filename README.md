@@ -125,9 +125,11 @@ For a more advanced example, consider the case of outputting an unordered hash i
  - [autotest][] behavior
  - timing performance
  - [progressbar][] style
+ - [parallel][] processing of tests
 
 [autotest]: https://github.com/grosser/autotest
 [progressbar]: http://ekenosen.net/nick/devblog/2008/12/better-progress-bar-for-rspec/
+[parallel]: http://www.gnu.org/software/parallel
 
 ## Copyright
 
