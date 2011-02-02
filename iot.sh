@@ -170,7 +170,7 @@ do
     -r|--root|--rootdir)  ROOTDIR="$1";                shift 2 ;;
     --root=*|--rootdir=*) ROOTDIR="${1##*=}";          shift   ;;
 
-    -c|--run|--command|) COMMAND="$1";                 shift 2 ;;
+    -c|--run|--command) COMMAND="$1";                 shift 2 ;;
     --run=*|--command=*) COMMAND="${1##*=}";           shift   ;;
 
     -i|--immediate|--imeadiate) immediate=true;        shift   ;;
@@ -403,7 +403,7 @@ failing_case() {
   sed 's/^/    /g' $immediate >> $immediate
   cat $immediate >> $results
 
-  if $immediate then;
+  if $immediate; then
     cat $immediate
   elif $suddendeath; then
     cat $results && exit 1
