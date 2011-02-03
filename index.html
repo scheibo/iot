@@ -32,7 +32,7 @@ man pages installed correctly:</p>
 <pre><code>$ git clone git://github.com/scheibo/iot.git
 $ cd iot
 $ make
-$ make install
+$ [sudo] make install
 $ iot program suite
 </code></pre>
 
@@ -219,7 +219,7 @@ screen real estate here.</p>
     -v|-vv|--verbose<span class="o">)</span>           <span class="nv">verbose</span><span class="o">=</span><span class="nb">true</span>;          <span class="nb">shift</span>   ;;
     -q|--quiet|--silent<span class="o">)</span>        <span class="nv">quiet</span><span class="o">=</span><span class="nb">true</span>;            <span class="nb">shift</span>   ;;
     -u|--unified<span class="o">)</span>               <span class="nv">unified</span><span class="o">=</span><span class="nb">true</span>;          <span class="nb">shift</span>   ;;
-    --copy|--safe|--concurrent<span class="o">)</span> <span class="nv">safe</span><span class="o">=</span><span class="nb">true</span>;             <span class="nb">shift</span>   ;;
+    --copy|--safe<span class="o">)</span>              <span class="nv">safe</span><span class="o">=</span><span class="nb">true</span>;             <span class="nb">shift</span>   ;;
     -x|--sudden-death|--sudden_death|--suddendeath<span class="o">)</span>
                                 <span class="nv">sudden_death</span><span class="o">=</span><span class="nb">true</span>;     <span class="nb">shift</span>   ;;
 
@@ -307,8 +307,7 @@ file and the rest of the options denote suites or tests to run to run.</p>
 
 <p>The safe option copies the entire source code of the program and is thus
 likely to be slow, but its the only way to safely be able to concurrently
-edit the program while we're testing it. Using <code>rsync(1)</code> here might be a
-better idea if we're trying to do some autotesting-like behavior.</p>
+edit the program while we're testing it.</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="o">[[</span> -f <span class="s2">&quot;${ROOTDIR}/${1}&quot;</span> <span class="o">]]</span> <span class="o">||</span> error <span class="s2">&quot;expects program to test as argument&quot;</span>
@@ -326,7 +325,9 @@ better idea if we're trying to do some autotesting-like behavior.</p>
 <p>We a place to concatenate our error messages that build up, so we create a
 <code>results</code> file to append to. In order to avoid collisions with test names
 we'll stick on our pid as well. We're also going to create an <code>immediate</code>
-results file as well, which will kind of act like a buffer to <code>results</code>.</p>
+results file as well, which will kind of act like a buffer to <code>results</code>. We
+<code>touch $results</code> so that when we try to cat it in the end of a passing test
+run we don't get an error.</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">results</span><span class="o">=</span><span class="s2">&quot;${SANDBOXDIR}/iot-results-$$&quot;</span>
@@ -376,7 +377,8 @@ get_locations<span class="o">()</span> <span class="o">{</span>
 the output streams in our <code>SANDBOXDIR</code>. <code>eval</code> shows it's ugly face here,
 but if the <code>COMMAND</code> that was passed in contains addition options (like
 <code>valgrind --leak-check=yes</code>, or something of that sort) then <code>eval</code> is
-necessary.</p>
+necessary. If we're using <code>--safe</code> we're given a full path so we need to
+change the way we call the file.</p>
 
 </td><td class=code><div class=highlight><pre>
 run_test<span class="o">()</span> <span class="o">{</span>
@@ -482,7 +484,9 @@ failing_output<span class="o">()</span> <span class="o">{</span>
 
 </pre></div></td></tr><tr><td class=docs>
 
-<p>TODO: need to test with matcher.</p>
+<p>Not much different from above, however, this is called with a different
+format as the 'Expected' and 'Received' headers are not required since it is
+explicit with a diff.</p>
 
 </td><td class=code><div class=highlight><pre>
 failing_unified<span class="o">()</span> <span class="o">{</span>
@@ -501,10 +505,12 @@ failing_unified<span class="o">()</span> <span class="o">{</span>
 
 </pre></div></td></tr><tr><td class=docs>
 
-<p>Most of the interesting stuff this function does was extrcacted to
+<p>Most of the interesting stuff this function does was extracted to
 <code>failing_output</code>, but it's worth noting we are outputing everything to
 <code>immediate</code> until the end, where we then append it to the real <code>results</code>
-file. Also note we're adding in some spaces to indent our output.</p>
+file. Also note we're adding in some spaces to indent our output. The most
+important line is the truncation of the <code>immediate_results</code> at the very end
+- without this our output would get incrementally bigger each time.</p>
 
 </td><td class=code><div class=highlight><pre>
 failing_case<span class="o">()</span> <span class="o">{</span>
