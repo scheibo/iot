@@ -92,12 +92,12 @@ failmsg() { printf "F"; }
 verbose_passmsg() {
   test_name="${1##/*/}"
   test_name="${test_name%%.in}"
-  printf "Passed test: '${suite}/${test_name}'\n"
+  printf "Passed test: '$(basename ${suite})/${test_name}'\n"
 }
 verbose_failmsg() {
   test_name="${1##/*/}"
   test_name="${test_name%%.in}"
-  printf "Failed test: '${suite}/${test_name}'\n"
+  printf "Failed test: '$(basename ${suite})/${test_name}'\n"
 }
 
 # Colors
@@ -156,16 +156,16 @@ safe=false
 while test $# -gt 0
 do
   case $1 in
-    -s|--sandboxdir|--tempdir)  SANDBOXDIR="$1";       shift 2 ;;
+    -s|--sandboxdir|--tempdir)  SANDBOXDIR="$2";       shift 2 ;;
     --tempdir=*|--sandboxdir=*) SANDBOXDIR="${1##*=}"; shift   ;;
 
-    -t|--testdir) TESTDIR="$1";                        shift 2 ;;
+    -t|--testdir) TESTDIR="$2";                        shift 2 ;;
     --testdir=*)  TESTDIR="${1##*=}";                  shift   ;;
 
-    -r|--root|--rootdir)  ROOTDIR="$1";                shift 2 ;;
+    -r|--root|--rootdir)  ROOTDIR="$2";                shift 2 ;;
     --root=*|--rootdir=*) ROOTDIR="${1##*=}";          shift   ;;
 
-    -c|--run|--command) COMMAND="$1";                 shift 2 ;;
+    -c|--run|--command) COMMAND="$2";                  shift 2 ;;
     --run=*|--command=*) COMMAND="${1##*=}";           shift   ;;
 
     -i|--immediate|--imeadiate) immediate=true;        shift   ;;
@@ -320,6 +320,7 @@ run_test() {
 # make his intentions clear). `dotest` will check the exit status of this
 # which in turn will be the exit value of the `diff`.
 perform_diff() {
+  out=false; err=false;
   combined_expect="${SANDBOXDIR}/${testname}.combined.expect"
   combined_result="${SANDBOXDIR}/${testname}.combined.result"
 
@@ -336,7 +337,7 @@ perform_diff() {
   fi
 
   if ! $out && ! $err; then
-    error "no expected output or error files for ${suite}/${testname}"
+    error "no expected output or error files for $(basename ${suite})/${testname}"
   fi
 
   diff $combined_expect $combined_result >/dev/null 2>&1
@@ -407,7 +408,7 @@ failing_case() {
   if $unified; then
     failing_unified
   else
-    pfail "\n${failcount}) ${suite}/${testname}\n" >> $immediate_results
+    pfail "\n${failcount}) $(basename ${suite})/${testname}\n" >> $immediate_results
 
     pwarn "${BOLD}Expected:\n" >> $immediate_results
     failing_output $expect_out $expect_err
@@ -416,7 +417,7 @@ failing_case() {
     failing_output $actual_out $actual_err
   fi
 
-  sed 's/^/ /g' $immediate_results >> $immediate_results
+  sed 's/^/  /g' $immediate_results > $immediate_results
   cat $immediate_results >> $results
 
   if $immediate; then
@@ -507,9 +508,9 @@ for arg in $@; do
 
        suite="${TESTDIR}/$(dirname $arg)"
        if [ -f "$suite/$(basename $arg).in" ]; then
-         dotest "$suite/$(basename $arg).in" suite "top"
+         dotest "$suite/$(basename $arg).in" $suite "top"
        else
-         dotest "$suite/in/$(basename $arg)" suite "in"
+         dotest "$suite/in/$(basename $arg)" $suite "in"
        fi
 
   else
