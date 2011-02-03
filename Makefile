@@ -53,9 +53,5 @@ docs:
 shocco:
 	shocco -t iot iot.sh > test.html
 
-test: clean $(PROGRAM)
-	./iot --rootdir='tests' iot-runner iot-suite
-
-
-.PHONY: run install uninstall pages docs shocco clean test
+.PHONY: run install uninstall pages docs shocco clean
 .SILENT: clean $(PROGRAM)

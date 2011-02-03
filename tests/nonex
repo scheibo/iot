@@ -1,4 +1,0 @@
-#!/bin/sh
-file=$(cat /dev/stdin)
-printf "$file"
-printf "$file" >&2

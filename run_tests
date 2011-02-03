@@ -1,2 +1,0 @@
-#!/bin/sh
-/bin/sh -x iot --rootdir='tests' iot-runner iot-suite
