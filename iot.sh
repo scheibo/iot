@@ -15,7 +15,7 @@
 #     $ git clone git://github.com/scheibo/iot.git
 #     $ cd iot
 #     $ make
-#     $ make install
+#     $ [sudo] make install
 #     $ iot program suite
 #
 # This web page was created by running [shocco][] against the `iot` [source][]
@@ -172,7 +172,7 @@ do
     -v|-vv|--verbose)           verbose=true;          shift   ;;
     -q|--quiet|--silent)        quiet=true;            shift   ;;
     -u|--unified)               unified=true;          shift   ;;
-    --copy|--safe|--concurrent) safe=true;             shift   ;;
+    --copy|--safe)              safe=true;             shift   ;;
     -x|--sudden-death|--sudden_death|--suddendeath)
                                 sudden_death=true;     shift   ;;
 
@@ -245,8 +245,7 @@ fi
 #
 # The safe option copies the entire source code of the program and is thus
 # likely to be slow, but its the only way to safely be able to concurrently
-# edit the program while we're testing it. Using `rsync(1)` here might be a
-# better idea if we're trying to do some autotesting-like behavior.
+# edit the program while we're testing it.
 [[ -f "${ROOTDIR}/${1}" ]] || error "expects program to test as argument"
 
 if $safe; then
@@ -260,7 +259,9 @@ shift
 # We a place to concatenate our error messages that build up, so we create a
 # `results` file to append to. In order to avoid collisions with test names
 # we'll stick on our pid as well. We're also going to create an `immediate`
-# results file as well, which will kind of act like a buffer to `results`.
+# results file as well, which will kind of act like a buffer to `results`. We
+# `touch $results` so that when we try to cat it in the end of a passing test
+# run we don't get an error.
 results="${SANDBOXDIR}/iot-results-$$"
 immediate_results="${SANDBOXDIR}/iot-immediate-$$"
 
@@ -299,7 +300,8 @@ get_locations() {
 # the output streams in our `SANDBOXDIR`. `eval` shows it's ugly face here,
 # but if the `COMMAND` that was passed in contains addition options (like
 # `valgrind --leak-check=yes`, or something of that sort) then `eval` is
-# necessary.
+# necessary. If we're using `--safe` we're given a full path so we need to
+# change the way we call the file.
 run_test() {
   actual_out="${SANDBOXDIR}/${testname}.out"
   actual_err="${SANDBOXDIR}/${testname}.err"
@@ -389,7 +391,9 @@ failing_output() {
   fi
 }
 
-# TODO: need to test with matcher.
+# Not much different from above, however, this is called with a different
+# format as the 'Expected' and 'Received' headers are not required since it is
+# explicit with a diff.
 failing_unified() {
   if $out && ! $err; then
      diff -u $expect_out $actual_out >> $immediate_results
@@ -404,10 +408,12 @@ failing_unified() {
    fi
 }
 
-# Most of the interesting stuff this function does was extrcacted to
+# Most of the interesting stuff this function does was extracted to
 # `failing_output`, but it's worth noting we are outputing everything to
 # `immediate` until the end, where we then append it to the real `results`
-# file. Also note we're adding in some spaces to indent our output.
+# file. Also note we're adding in some spaces to indent our output. The most
+# important line is the truncation of the `immediate_results` at the very end
+# - without this our output would get incrementally bigger each time.
 failing_case() {
   failing_message
 

@@ -69,7 +69,7 @@ Various different mode options can also be specified:
 * `-u`, `--unified`:
   Use unified diffs as opposed to the standard failure message.
 
-* `--safe`, `--copy`, `--concurrent`:
+* `--safe`, `--copy`:
 	Copy the source code of the file on start up and test the copied version,
 	making it so that it's safe to edit the original version while testing is
 	occurring.
