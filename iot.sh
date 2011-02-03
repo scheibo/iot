@@ -83,8 +83,8 @@ error() {
 # indicator. Specifying `-v` will get the user more information if they want
 # it. One thing to note is that the messages will get colored (red and green,
 # respectively) later on down the line.
-passmsg() { printf "."; }
-failmsg() { printf "F"; }
+passmsg() { ppass "."; }
+failmsg() { pfail "F"; }
 
 # There is also the verbose options for the messages. Two things to note are
 # how we manually include a newline and how we're normalizing the test file
@@ -92,12 +92,12 @@ failmsg() { printf "F"; }
 verbose_passmsg() {
   test_name="${1##/*/}"
   test_name="${test_name%%.in}"
-  printf "Passed test: '$(basename ${suite})/${test_name}'\n"
+  ppass "Passed test: '$(basename ${suite})/$(basename ${test_name})'\n"
 }
 verbose_failmsg() {
   test_name="${1##/*/}"
   test_name="${test_name%%.in}"
-  printf "Failed test: '$(basename ${suite})/${test_name}'\n"
+  pfail "Failed test: '$(basename ${suite})/$(basename ${test_name})'\n"
 }
 
 # Colors
@@ -264,6 +264,8 @@ shift
 results="${SANDBOXDIR}/iot-results-$$"
 immediate_results="${SANDBOXDIR}/iot-immediate-$$"
 
+touch $results
+
 # Testing Function
 # ----------------
 #
@@ -305,7 +307,11 @@ run_test() {
   if [ -n "${COMMAND:+1}" ]; then
     eval "${COMMAND} $PROGNAME < $testfile > $actual_out 2> $actual_err"
   elif [ -x $PROGNAME ]; then
-    eval "./${PROGNAME}  < $testfile > $actual_out 2> $actual_err"
+    if ! $safe; then
+      eval "./${PROGNAME}  < $testfile > $actual_out 2> $actual_err"
+    else
+      eval "${PROGNAME}  < $testfile > $actual_out 2> $actual_err"
+    fi
   else
     error "'$PROGNAME' is not executable, cannot run tests"
   fi
@@ -348,17 +354,17 @@ perform_diff() {
 # passed the option `--verbose` or not.
 passing_message() {
   if $verbose; then
-    ppass `verbose_passmsg $testfile $count`
+    verbose_passmsg $testfile $count
   else
-    ppass `passmsg $testfile $count`
+    passmsg $testfile $count
   fi
 }
 
 failing_message() {
   if $verbose; then
-     ppass `verbose_failmsg $testfile $count`
+     verbose_failmsg $testfile $count
    else
-     ppass `failmsg $testfile $count`
+     failmsg $testfile $count
    fi
 }
 
@@ -386,15 +392,15 @@ failing_output() {
 # TODO: need to test with matcher.
 failing_unified() {
   if $out && ! $err; then
-     diff -u $expected_out $actual_out >> $immediate_results
+     diff -u $expect_out $actual_out >> $immediate_results
    elif ! $out && $err; then
      pwarn "stderr:\n" >> $immediate_results
-     diff -u $expected_err $actual_err >> $immediate_results
+     diff -u $expect_err $actual_err >> $immediate_results
    else
      pwarn "stdout:\n" >> $immediate_results
-     diff -u $expected_out $actual_out >> $immediate_results
+     diff -u $expect_out $actual_out >> $immediate_results
      pwarn "stderr:\n" >> $immediate_results
-     diff -u $expected_err $actual_err >> $immediate_results
+     diff -u $expect_err $actual_err >> $immediate_results
    fi
 }
 
@@ -405,11 +411,11 @@ failing_unified() {
 failing_case() {
   failing_message
 
-  if $unified; then
-    failing_unified
-  else
-    pfail "\n${failcount}) $(basename ${suite})/${testname}\n" >> $immediate_results
+  pfail "\n${failcount}) $(basename ${suite})/${testname}\n" >> $immediate_results
 
+  if $unified; then
+     failing_unified
+   else
     pwarn "${BOLD}Expected:\n" >> $immediate_results
     failing_output $expect_out $expect_err
 
@@ -417,14 +423,16 @@ failing_case() {
     failing_output $actual_out $actual_err
   fi
 
-  sed 's/^/  /g' $immediate_results > $immediate_results
   cat $immediate_results >> $results
 
   if $immediate; then
-    cat $immediate_results
-  elif $suddendeath; then
+    echo >> $immediate_results
+    sed 's/^/  /g' $immediate_results
+  elif $sudden_death; then
     cat $results && exit 1
   fi
+
+  cat /dev/null > $immediate_results
 }
 
 # Here's the function that is composed of all the above subroutines. We're
@@ -527,13 +535,13 @@ done
 # Standard case finishing action (i.e. we didn't terminate early thanks to
 # `--immediate` or `--sudden-death`) - we simply display the results and the
 # statistics (passes vs. failures). We don't display the results when
-# immediate is set since they've already all been shown. The results are
-# already conveniently indented from when they were created.
+# immediate is set since they've already all been shown.
 if ! $quiet; then
-  echo "Finished"
+  if ! $verbose; then echo; fi
+  printf "Finished\n"
 
   if ! $immediate; then
-    cat $results
+    sed 's/^/  /g' $results
   fi
 
   if [ $failcount -eq 0 ]; then
