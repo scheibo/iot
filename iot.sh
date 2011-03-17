@@ -185,6 +185,26 @@ do
   esac
 done
 
+# We want to bring in the file that holds our custom matchers. If `MATCHER` is
+# set then we know `--matcher` was passed on the command line and we just source
+# the file provided if it exists. Otherwise, we default to trying to source the
+# `test_matcher` or `iot_matcher` files. Finally, we try to source any file in
+# the `$TESTDIR` which either ends in '.matcher' or '_matcher'.
+if [ -n "${MATCHER:+1}" ]; then
+  if [ -f "$MATCHER" ]; then
+    source $MATCHER
+  else
+    error "invalid option file '$MATCHER'"
+  fi
+fi
+
+test -f "${TESTDIR}/test_matcher" && { source $"${TESTDIR}/test_matcher"; }
+test -f "${TESTDIR}/iot_matcher"  && { source "${TESTDIR}/iot_matcher"; }
+
+for mfile in $(ls *_matcher *.matcher); do
+  source $mfile
+done
+
 # Sandbox and Cleanup
 # -------------------
 #
@@ -194,19 +214,18 @@ done
 # `TMPDIR` is set. We then try to use `mktmp(1)` to create the temp directory
 # if we're lucky enough to have it, otherwise we create our directory far more
 # insecurely using the programs basename and pid. One thing to note: some
-# implementations of `mktmp(1)` require the string of X's and other don't, I
+# implementations of `mktmp(1)` require the string of X's and others don't, I
 # had trouble installing `shocco(1)` on my machines because of this issue.
 : ${TMPDIR:=/tmp}
 : ${SANDBOXDIR:=$(
-      if command -v mktemp 1>/dev/null 2>&1
-      then
-          mktemp -dt "$(basename $0).XXXXXXXXXXXXX"
-      else
-          dir="$TMPDIR/$(basename $0).$$"
-          mkdir "$dir"
-          echo "$dir"
-      fi
-  )}
+  if command -v mktemp 1>/dev/null 2>&1; then
+    mktemp -dt "$(basename $0).XXXXXXXXXXXXX"
+  else
+    dir="$TMPDIR/$(basename $0).$$"
+    mkdir "$dir"
+    echo "$dir"
+  fi
+)}
 
 # Here we perform a bit of a sanity check to make sure we're not using a
 # stupid location for our temp directory which would result in lots of
@@ -322,6 +341,21 @@ run_test() {
   fi
 }
 
+# `get_match_prefix` checks the testname and returns the name of the matcher to
+# match it against, or an empty string if the test name actually has no matcher.
+# If the matcher they specified doesn't happen to exit (`type` checks if the
+# function is available) we simply set prefix to null so that `dotest` will do a
+# normal diff. We can't immediately error out here on a bad matcher name since
+# we don't specify any restrictions on the way a user names their files. They
+# could name it 'my.super.cool.name' and we will be looking for a function
+# called 'my_matcher' which may or may not exist, but thats not our problem
+get_match_prefix() {
+  prefix=$(expr "$testname" : "\(.*\)\..*")
+  if [[ -n "$prefix" ]] && ! type -t "${prefix}_matcher" 1>/dev/null 2>&1; then
+    prefix=""
+  fi
+}
+
 # Now we need to actually perform the `diff`. Since we need to possibly
 # compare both out and error streams we need to make a 'combined' file that
 # holds both of these appended to each other, provided the expect files exist.
@@ -354,6 +388,18 @@ perform_diff() {
   diff $combined_expect $combined_result >/dev/null 2>&1
 }
 
+# `perform_match` is a lot simpler than `perform_diff` since we pass all the
+# work off to the matcher function. We set the out and err variables to true so
+# the failing output gets printed - we don't really customize what the output is
+# at this point in time. Potentially the matcher function could be responsible
+# for an error message as well? By default whatever expected files we have are
+# going to get printed.
+perform_match(){
+  [[ -f "$expect_out" ]] && out=true;
+  [[ -f "$expect_err" ]] && err=true;
+  eval "${prefix}_matcher $actual_out $actual_err $expect_out $expect_err 2>&1"
+}
+
 # Very straightforward chunk of code for the passing and failing message s- we
 # simply print a different message depending on whether or not we've been
 # passed the option `--verbose` or not.
@@ -367,10 +413,10 @@ passing_message() {
 
 failing_message() {
   if $verbose; then
-     verbose_failmsg $testfile $count
-   else
-     failmsg $testfile $count
-   fi
+    verbose_failmsg $testfile $count
+  else
+    failmsg $testfile $count
+  fi
 }
 
 # Abstracted from the next function, `failing_case`, this function expects an
@@ -453,7 +499,13 @@ dotest() {
 
   get_locations
   run_test
-  perform_diff
+
+  get_match_prefix
+  if [ -n "$prefix" ]; then
+    perform_match
+  else
+    perform_diff
+  fi
 
   if [ $? -eq 0 ]; then
     if ! $quiet; then
@@ -568,24 +620,3 @@ exit $failcount
 # Copyright (C) [Kirk Scheibelhut](http://scheibo.com/about)<br />
 # This is Free Software distributed under the MIT license.
 :
-
-
-# We want to bring in the file that holds our custom matchers. If `MATCHER` is
-# set then we know `--matcher` was passed on the command line and we just source
-# the file provided if it exists. Otherwise, we default to trying to source the
-# `test_matcher` or `iot_matcher` files. Finally, we try to source any file in
-# the `$TESTDIR` which either ends in '.matcher' or '_matcher'.
-if [ -n "${MATCHER:+1}" ]; then
-    if [ -f "$MATCHER" ]; then
-        source $MATCHER
-    else
-        error "invalid option file '$MATCHER'"
-    fi
-fi
-
-test -f "${TESTDIR}/test_matcher" && { source $"${TESTDIR}/test_matcher"; }
-test -f "${TESTDIR}/iot_matcher"  && { source "${TESTDIR}/iot_matcher"; }
-
-for mfile in $(ls *_matcher *.matcher); do
-    source $mfile
-done
