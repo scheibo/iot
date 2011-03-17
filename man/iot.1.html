@@ -159,7 +159,19 @@ over this value.</p></dd>
 
 <h2 id="CUSTOM-MATCHERS">CUSTOM MATCHERS</h2>
 
-<p><code>iot</code> provides the ability to using a custom matcher when determining if a test passes or fails as opposed to simply using diff. To create a custom matcher, create a file in the <var>TESTDIR</var> which is called either 'test_matcher' or 'iot_matcher'. Alternatively, specify a matcher file with the <code>--matcher</code> argument or the <var>MATCHER</var> environment variable. Inside the matcher file write one or more functions named '<code>prefix_</code>matcher', where <code>prefix</code> is the name of the given matcher you are hoping to create. Any tests in the input directory with this prefix at the beginning of their file name (seperated with a '_' or a '.' from the rest of the file name) will use this custom matcher as opposed to <code>diff</code>. A custom matcher is passed 4 arguments: <code>result_output</code>, <code>result_err</code>, <code>expected_output</code>, <code>expected_err</code>; where all of the previous arguments are paths which name the specific (possibly non-existent) files. An example of a matcher which checks the result error output for the message 'ERROR' would be:</p>
+<p><code>iot</code> provides the ability to using a custom matcher when determining if a test
+passes or fails as opposed to simply using diff. To create a custom matcher,
+create a file in the <var>TESTDIR</var> which is called either 'test_matcher' or
+'iot_matcher'. Alternatively, specify a matcher file with the <code>--matcher</code>
+argument or the <var>MATCHER</var> environment variable. Inside the matcher file write
+one or more functions named '<code>prefix_</code>matcher', where <code>prefix</code> is the name of
+the given matcher you are hoping to create. Any tests in the input directory
+with this prefix at the beginning of their file name (seperated with a '.' from
+the rest of the file name) will use this custom matcher as opposed to <code>diff</code>. A
+custom matcher is passed 4 arguments: <code>result_output</code>, <code>result_err</code>,
+<code>expected_output</code>, <code>expected_err</code>; where all of the previous arguments are paths
+which name the specific (possibly non-existent) files. An example of a matcher
+which checks the result error output for the message 'ERROR' would be:</p>
 
 <pre><code># tests/test_matcher
 error_check_matcher() {
@@ -189,7 +201,7 @@ error_check_matcher() {
 
   <ol class='man-decor man-foot man foot'>
     <li class='tl'>SCHEIBO</li>
-    <li class='tc'>February 2011</li>
+    <li class='tc'>March 2011</li>
     <li class='tr'>iot(1)</li>
   </ol>
 

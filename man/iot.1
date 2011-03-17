@@ -1,7 +1,7 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "IOT" "1" "February 2011" "SCHEIBO" "iot Manual"
+.TH "IOT" "1" "March 2011" "SCHEIBO" "iot Manual"
 .
 .SH "NAME"
 \fBiot\fR \- input/output tests
@@ -116,7 +116,7 @@ Use the given command to execute the \fIprogram\fR which is being tested as oppo
 Path to a custom \fImatcher\fR file\. The \fB\-\-matcher\fR option takes precedence over this value\.
 .
 .SH "CUSTOM MATCHERS"
-\fBiot\fR provides the ability to using a custom matcher when determining if a test passes or fails as opposed to simply using diff\. To create a custom matcher, create a file in the \fITESTDIR\fR which is called either \'test_matcher\' or \'iot_matcher\'\. Alternatively, specify a matcher file with the \fB\-\-matcher\fR argument or the \fIMATCHER\fR environment variable\. Inside the matcher file write one or more functions named \'\fBprefix_\fRmatcher\', where \fBprefix\fR is the name of the given matcher you are hoping to create\. Any tests in the input directory with this prefix at the beginning of their file name (seperated with a \'_\' or a \'\.\' from the rest of the file name) will use this custom matcher as opposed to \fBdiff\fR\. A custom matcher is passed 4 arguments: \fBresult_output\fR, \fBresult_err\fR, \fBexpected_output\fR, \fBexpected_err\fR; where all of the previous arguments are paths which name the specific (possibly non\-existent) files\. An example of a matcher which checks the result error output for the message \'ERROR\' would be:
+\fBiot\fR provides the ability to using a custom matcher when determining if a test passes or fails as opposed to simply using diff\. To create a custom matcher, create a file in the \fITESTDIR\fR which is called either \'test_matcher\' or \'iot_matcher\'\. Alternatively, specify a matcher file with the \fB\-\-matcher\fR argument or the \fIMATCHER\fR environment variable\. Inside the matcher file write one or more functions named \'\fBprefix_\fRmatcher\', where \fBprefix\fR is the name of the given matcher you are hoping to create\. Any tests in the input directory with this prefix at the beginning of their file name (seperated with a \'\.\' from the rest of the file name) will use this custom matcher as opposed to \fBdiff\fR\. A custom matcher is passed 4 arguments: \fBresult_output\fR, \fBresult_err\fR, \fBexpected_output\fR, \fBexpected_err\fR; where all of the previous arguments are paths which name the specific (possibly non\-existent) files\. An example of a matcher which checks the result error output for the message \'ERROR\' would be:
 .
 .IP "" 4
 .
