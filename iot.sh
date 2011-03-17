@@ -168,6 +168,9 @@ do
     -c|--run|--command) COMMAND="$2";                  shift 2 ;;
     --run=*|--command=*) COMMAND="${1##*=}";           shift   ;;
 
+    -m|--matcher) MATCHER="$2";                        shift 2 ;;
+    --matcher=*) MATCHER="${1##*=}";                   shift   ;;
+
     -i|--immediate|--imeadiate) immediate=true;        shift   ;;
     -v|-vv|--verbose)           verbose=true;          shift   ;;
     -q|--quiet|--silent)        quiet=true;            shift   ;;
@@ -565,3 +568,23 @@ exit $failcount
 # Copyright (C) [Kirk Scheibelhut](http://scheibo.com/about)<br />
 # This is Free Software distributed under the MIT license.
 :
+
+
+# We want to bring in the file that holds our custom matchers. If `MATCHER` is
+# set then we know `--matcher` was passed on the command line and we just source
+# the file provided if it exists. Otherwise, we default to trying to source the
+# `test_matcher` or `iot_matcher` files. If none of the files exist we do
+# nothing - there simply hasn't been any custom matchers defined
+if [ -n "${MATCHER:+1}" ]; then
+    if [ -f "$MATCHER" ]; then
+        source $MATCHER
+    else
+        error "invalid option file '$MATCHER'"
+    fi
+else
+    if [ -f "$TESTDIR/test_matcher" ]; then
+        source "$TESTDIR/test_matcher"
+    elif [ -f "$TESTDIR/iot_matcher" ]; then
+        source "$TESTDIR/iot_matcher"
+    fi
+fi
