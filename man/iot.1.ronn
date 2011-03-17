@@ -100,7 +100,19 @@ Various different mode options can also be specified:
 
 ## CUSTOM MATCHERS
 
-`iot` provides the ability to using a custom matcher when determining if a test passes or fails as opposed to simply using diff. To create a custom matcher, create a file in the <TESTDIR> which is called either 'test_matcher' or 'iot\_matcher'. Alternatively, specify a matcher file with the `--matcher` argument or the <MATCHER> environment variable. Inside the matcher file write one or more functions named '`prefix_`matcher', where `prefix` is the name of the given matcher you are hoping to create. Any tests in the input directory with this prefix at the beginning of their file name (seperated with a '\_' or a '.' from the rest of the file name) will use this custom matcher as opposed to `diff`. A custom matcher is passed 4 arguments: `result_output`, `result_err`, `expected_output`, `expected_err`; where all of the previous arguments are paths which name the specific (possibly non-existent) files. An example of a matcher which checks the result error output for the message 'ERROR' would be:
+`iot` provides the ability to using a custom matcher when determining if a test
+passes or fails as opposed to simply using diff. To create a custom matcher,
+create a file in the <TESTDIR> which is called either 'test_matcher' or
+'iot\_matcher'. Alternatively, specify a matcher file with the `--matcher`
+argument or the <MATCHER> environment variable. Inside the matcher file write
+one or more functions named '`prefix_`matcher', where `prefix` is the name of
+the given matcher you are hoping to create. Any tests in the input directory
+with this prefix at the beginning of their file name (seperated with a '.' from
+the rest of the file name) will use this custom matcher as opposed to `diff`. A
+custom matcher is passed 4 arguments: `result_output`, `result_err`,
+`expected_output`, `expected_err`; where all of the previous arguments are paths
+which name the specific (possibly non-existent) files. An example of a matcher
+which checks the result error output for the message 'ERROR' would be:
 
 	# tests/test_matcher
 	error_check_matcher() {

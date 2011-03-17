@@ -77,7 +77,18 @@ Sometimes `diff`-ing the expected and actual output streams to coarse -- perhaps
 
 ### Prefixes
 
-`iot` determines which files to use a custom test matcher on by checking out the prefix of the test input file it is evaluating. Let's say that for our case above (checking that 'ERROR' exists on the `stderr` stream) we're going to use a custom matcher named `error_check`. In that case, any test input file we wish to use this matcher on should should be prefixed with `error_check`. Prefixes can come in the form of '`prefix_`' or '`prefix.`' (that is, followed by a '_' or a '.'). The output and error files for this input file should also have the prefix on them as well. Prefixed test input files can coexist in a test suite with non-prefixed input files, and multiple different types of prefixed index files can exist in a given suite. The only thing different between an input file with a prefix and a non-prefixed file is that the prefixed file will be matched by a different matcher.
+`iot` determines which files to use a custom test matcher on by checking out the
+prefix of the test input file it is evaluating. Let's say that for our case
+above (checking that 'ERROR' exists on the `stderr` stream) we're going to use a
+custom matcher named `error_check`. In that case, any test input file we wish to
+use this matcher on should should be prefixed with `error_check`. Prefixes must
+come in the form of '`prefix.`' (that is, followed by a '.'). The output and
+error files for this input file should also have the prefix on them as well.
+Prefixed test input files can coexist in a test suite with non-prefixed input
+files, and multiple different types of prefixed index files can exist in a given
+suite. The only thing different between an input file with a prefix and a
+non-prefixed file is that the prefixed file will be matched by a different
+matcher.
 
 ### Matchers
 
@@ -94,7 +105,7 @@ Matchers form the other half of the custom test matcher system. A matcher is the
 
 This file get sourced in `iot` and is available to all of the test suites. Alternatively, each test matcher can belong in its own file named by '`prefix`'matcher, where prefix is described above. Hence we could put our `error_check` matcher in a file named `error_check_matcher` _or_ `error_check.matcher`. These individual matcher files should also be in the top level `test` directory. One final alternative is to specify the matcher file to use through the `--matcher` option on the command line.
 
-Inside of a matcher file should be a function named `prefix`matcher (where only the `prefix_` form is a allowed, since it is a function) which takes in a couple of arguments: `$result_output`, `$result_err`, `$expected_output`, `$expected_err`; where all of the previous arguments are paths which name the specific (possibly non-existent) files. The `$expected_output` and `$expected_err` files would be non-existent if they were not provided in the suites -- some matchers don't require these files. The matcher function need simply return a non-zero exit code to signal that the test has failed. Coming back to our error example from above:
+Inside of a matcher file should be a function named `prefix`_matcher which takes in a couple of arguments: `$result_output`, `$result_err`, `$expected_output`, `$expected_err`; where all of the previous arguments are paths which name the specific (possibly non-existent) files. The `$expected_output` and `$expected_err` files would be non-existent if they were not provided in the suites -- some matchers don't require these files. The matcher function need simply return a non-zero exit code to signal that the test has failed. Coming back to our error example from above:
 
 	# tests/test_matcher
 	error_check_matcher() {
