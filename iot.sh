@@ -185,26 +185,6 @@ do
   esac
 done
 
-# We want to bring in the file that holds our custom matchers. If `MATCHER` is
-# set then we know `--matcher` was passed on the command line and we just source
-# the file provided if it exists. Otherwise, we default to trying to source the
-# `test_matcher` or `iot_matcher` files. Finally, we try to source any file in
-# the `$TESTDIR` which either ends in '.matcher' or '_matcher'.
-if [ -n "${MATCHER:+1}" ]; then
-  if [ -f "$MATCHER" ]; then
-    source $MATCHER
-  else
-    error "invalid option file '$MATCHER'"
-  fi
-fi
-
-test -f "${TESTDIR}/test_matcher" && { source $"${TESTDIR}/test_matcher"; }
-test -f "${TESTDIR}/iot_matcher"  && { source "${TESTDIR}/iot_matcher"; }
-
-for mfile in $(ls *_matcher *.matcher 2>/dev/null); do
-  source $mfile
-done
-
 # Sandbox and Cleanup
 # -------------------
 #
@@ -239,7 +219,7 @@ fi
 # All of the code dealing with creating and cleaning up our temporary sandbox # directory comes at you straight out of [shocco][].
 trap "rm -rf $SANDBOXDIR" 0
 
-# 'Root' Directory
+# Directory Setup
 # ----------------
 #
 # Here we try to determine where the root directory of the project we're
@@ -258,6 +238,34 @@ if [ -z "${ROOTDIR:+1}" ]; then
   hg root 1>/dev/null 2>&1 && ROOTDIR=`hg root`
   git rev-parse --show-toplevel 1>/dev/null 2>&1 && ROOTDIR=`git rev-parse --show-toplevel`
 fi
+
+
+# The default location we're going to be look for tests when resolving
+# 'pseudo' paths and suite names. The `:=` form is used here again, it's
+# similar to the `||=` in Ruby.
+default="${ROOTDIR}/tests"
+: ${TESTDIR:=$default}
+
+
+# We want to bring in the file that holds our custom matchers. If `MATCHER` is
+# set then we know `--matcher` was passed on the command line and we just source
+# the file provided if it exists. Otherwise, we default to trying to source the
+# `test_matcher` or `iot_matcher` files. Finally, we try to source any file in
+# the `$TESTDIR` which either ends in '.matcher' or '_matcher'.
+if [ -n "${MATCHER:+1}" ]; then
+  if [ -f "$MATCHER" ]; then
+    source $MATCHER
+  else
+    error "invalid option file '$MATCHER'"
+  fi
+fi
+
+test -f "${TESTDIR}/test_matcher" && { source $"${TESTDIR}/test_matcher"; }
+test -f "${TESTDIR}/iot_matcher"  && { source "${TESTDIR}/iot_matcher"; }
+
+for mfile in $(ls *_matcher *.matcher 2>/dev/null); do
+  source $mfile
+done
 
 # Final Preparations
 # ------------------
@@ -350,10 +358,10 @@ run_test() {
 # could name it 'my.super.cool.name' and we will be looking for a function
 # called 'my_matcher' which may or may not exist, but thats not our problem
 get_match_prefix() {
-  prefix=$(expr "$testname" : "\(.*\)\..*")
-  if [ -n "$prefix" ] && [ ! type -t "${prefix}_matcher" 1>/dev/null 2>&1 ]; then
+  prefix=$(expr "$testname" : "\([^.]*\)\..*")
+  type -t "${prefix}_matcher" 1>/dev/null 2>&1 || {
     prefix=""
-  fi
+  }
 }
 
 # Now we need to actually perform the `diff`. Since we need to possibly
@@ -395,6 +403,7 @@ perform_diff() {
 # for an error message as well? By default whatever expected files we have are
 # going to get printed.
 perform_match(){
+  out=false; err=false;
   [[ -f "$expect_out" ]] && out=true;
   [[ -f "$expect_err" ]] && err=true;
   eval "${prefix}_matcher $actual_out $actual_err $expect_out $expect_err 1>/dev/null 2>&1"
@@ -432,7 +441,7 @@ failing_output() {
   elif ! $out && $err; then
     pwarn "stderr:\n" >> $immediate_results
     cat $err_file >> $immediate_results
-  else
+  elif $out && $err; then
     pwarn "stdout:\n" >> $immediate_results
     cat $out_file >> $immediate_results
     pwarn "stderr:\n" >> $immediate_results
@@ -445,16 +454,16 @@ failing_output() {
 # explicit with a diff.
 failing_unified() {
   if $out && ! $err; then
-     diff -u $expect_out $actual_out >> $immediate_results
-   elif ! $out && $err; then
-     pwarn "stderr:\n" >> $immediate_results
-     diff -u $expect_err $actual_err >> $immediate_results
-   else
-     pwarn "stdout:\n" >> $immediate_results
-     diff -u $expect_out $actual_out >> $immediate_results
-     pwarn "stderr:\n" >> $immediate_results
-     diff -u $expect_err $actual_err >> $immediate_results
-   fi
+    diff -u $expect_out $actual_out >> $immediate_results
+  elif ! $out && $err; then
+    pwarn "stderr:\n" >> $immediate_results
+    diff -u $expect_err $actual_err >> $immediate_results
+  elif $out && $err; then
+    pwarn "stdout:\n" >> $immediate_results
+    diff -u $expect_out $actual_out >> $immediate_results
+    pwarn "stderr:\n" >> $immediate_results
+    diff -u $expect_err $actual_err >> $immediate_results
+  fi
 }
 
 # Most of the interesting stuff this function does was extracted to
@@ -524,12 +533,6 @@ dotest() {
 # Main Testing Loop
 # -----------------
 #
-# The default location we're going to be look for tests when resolving
-# 'pseudo' paths and suite names. The `:=` form is used here again, it's
-# similar to the `||=` in Ruby.
-default="${ROOTDIR}/tests"
-: ${TESTDIR:=$default}
-
 # We keep track of two counter variables in our test loop - `testcount` and
 # `failcount`. `testcount` keeps track of the number of tests run and
 # `failcount` keeps track of the number of tests which have failed. These are
