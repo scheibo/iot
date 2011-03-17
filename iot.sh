@@ -582,9 +582,34 @@ if [ -n "${MATCHER:+1}" ]; then
         error "invalid option file '$MATCHER'"
     fi
 else
-    if [ -f "$TESTDIR/test_matcher" ]; then
-        source "$TESTDIR/test_matcher"
-    elif [ -f "$TESTDIR/iot_matcher" ]; then
-        source "$TESTDIR/iot_matcher"
+    if [ -f "${TESTDIR}/test_matcher" ]; then
+        MATCHER="${TESTDIR}/test_matcher"
+        source $MATCHER
+    elif [ -f "${TESTDIR}/iot_matcher" ]; then
+        MATCHER="${TESTDIR}/iot_matcher"
+        source $MATCHER
     fi
+fi
+
+# Next we need to figure out which matchers are provided in the file named by
+# `$MATCHER`. The first case is that there was no matcher files provided - if
+# that's the case we do nothing. We check for this case by checking if `MATCHER`
+# is defined.
+#
+# We then need to do a search in our matcher file for matcher functions. A
+# function is something of the form:
+#
+#     func_name() { ...
+#
+# *or*
+#
+#     function funcname { ...
+#
+# So in order to accomdate these two styles we have a gnarly looking `grep`
+# statement. We then loop through each of these ugly funcnames and
+if [ -n "${MATCHER:+1}" ]; then
+    for func in $(grep
+    "[[:space:]]*\([0-9A-Za-z_]\{1,\}()\)\|\(function[[:space:]]*[0-9A-Za-z_]\{1,\}\)"); do
+        echo $func
+    done
 fi

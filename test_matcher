@@ -1,0 +1,20 @@
+# tests/test_matcher
+unordered_matcher(){
+    actual_output="$1"
+    expected_output="$3"
+
+    for line in "$expected_output"; do
+        if [ $(grep -c "^${line}$" "$actual_output") -ne 1 ]; then
+            exit 1;
+        fi
+    done
+}
+# tests/test_matcher
+error_check_matcher() {
+    shift; # ignore result_output
+    grep "ERROR" "$1"
+}
+one_line_error_check_matcher() { shift; grep "ERROR" "$1"; }
+function stupid {
+  echo "Dumb way of testing"
+}
