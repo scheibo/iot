@@ -201,7 +201,7 @@ fi
 test -f "${TESTDIR}/test_matcher" && { source $"${TESTDIR}/test_matcher"; }
 test -f "${TESTDIR}/iot_matcher"  && { source "${TESTDIR}/iot_matcher"; }
 
-for mfile in $(ls *_matcher *.matcher); do
+for mfile in $(ls *_matcher *.matcher 2>/dev/null); do
   source $mfile
 done
 
@@ -351,7 +351,7 @@ run_test() {
 # called 'my_matcher' which may or may not exist, but thats not our problem
 get_match_prefix() {
   prefix=$(expr "$testname" : "\(.*\)\..*")
-  if [[ -n "$prefix" ]] && ! type -t "${prefix}_matcher" 1>/dev/null 2>&1; then
+  if [ -n "$prefix" ] && [ ! type -t "${prefix}_matcher" 1>/dev/null 2>&1 ]; then
     prefix=""
   fi
 }
@@ -397,7 +397,7 @@ perform_diff() {
 perform_match(){
   [[ -f "$expect_out" ]] && out=true;
   [[ -f "$expect_err" ]] && err=true;
-  eval "${prefix}_matcher $actual_out $actual_err $expect_out $expect_err 2>&1"
+  eval "${prefix}_matcher $actual_out $actual_err $expect_out $expect_err 1>/dev/null 2>&1"
 }
 
 # Very straightforward chunk of code for the passing and failing message s- we
