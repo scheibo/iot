@@ -239,20 +239,18 @@ if [ -z "${ROOTDIR:+1}" ]; then
   git rev-parse --show-toplevel 1>/dev/null 2>&1 && ROOTDIR=`git rev-parse --show-toplevel`
 fi
 
-
 # The default location we're going to be look for tests when resolving
 # 'pseudo' paths and suite names. The `:=` form is used here again, it's
 # similar to the `||=` in Ruby.
 default="${ROOTDIR}/tests"
 : ${TESTDIR:=$default}
 
-
 # We want to bring in the file that holds our custom matchers. If `MATCHER` is
 # set then we know `--matcher` was passed on the command line and we just source
 # the file provided if it exists. Otherwise, we default to trying to source the
-# `test_matcher` or `iot_matcher` files, which we can actually skip since we
-# next try to source any file in the `$TESTDIR` which either ends in '.matcher'
-# or '_matcher'.
+# `test_matcher` or `iot_matcher` files, which we can actually skip the code to
+# explicitly test and source these since we next try to source any file in the
+# `$TESTDIR` which either ends in '.matcher' or '_matcher'.
 if [ -n "${MATCHER:+1}" ]; then
   if [ -f "$MATCHER" ]; then
     source $MATCHER
@@ -395,12 +393,12 @@ perform_diff() {
 }
 
 # `perform_match` is a lot simpler than `perform_diff` since we pass all the
-# work off to the matcher function. We set the out and err variables to true so
-# the failing output gets printed - we don't really customize what the output is
-# at this point in time. Potentially the matcher function could be responsible
-# for an error message as well? By default whatever expected files we have are
-# going to get printed.
-perform_match(){
+# work off to the matcher function. We need to decide whether out or err is true
+# so the failing output gets printed - we don't really customize what the output
+# is at this point in time. Potentially the matcher function could be
+# responsible for an error message as well? By default whatever expected files
+# we have are going to get printed.
+perform_match() {
   out=false; err=false;
   [[ -f "$expect_out" ]] && out=true;
   [[ -f "$expect_err" ]] && err=true;
@@ -469,7 +467,10 @@ failing_unified() {
 # `immediate` until the end, where we then append it to the real `results`
 # file. Also note we're adding in some spaces to indent our output. The most
 # important line is the truncation of the `immediate_results` at the very end
-# - without this our output would get incrementally bigger each time.
+# - without this our output would get incrementally bigger each time. We also
+# check `$put` and `$err` at this point since if a user is using a custom
+# matcher he might not need either one of the expect files and we can't print
+# them if they're not present.
 failing_case() {
   failing_message
 
