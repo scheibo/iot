@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/bin/sh
 # **iot** serves as a testing 'framework' for the times when you only care
 # that given a certain input, a certain output is produced. `iot` tries to be
 # a simple solution to creating and managing test suites in this limited
