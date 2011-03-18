@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -x
 # **iot** serves as a testing 'framework' for the times when you only care
 # that given a certain input, a certain output is produced. `iot` tries to be
 # a simple solution to creating and managing test suites in this limited
@@ -250,8 +250,9 @@ default="${ROOTDIR}/tests"
 # We want to bring in the file that holds our custom matchers. If `MATCHER` is
 # set then we know `--matcher` was passed on the command line and we just source
 # the file provided if it exists. Otherwise, we default to trying to source the
-# `test_matcher` or `iot_matcher` files. Finally, we try to source any file in
-# the `$TESTDIR` which either ends in '.matcher' or '_matcher'.
+# `test_matcher` or `iot_matcher` files, which we can actually skip since we
+# next try to source any file in the `$TESTDIR` which either ends in '.matcher'
+# or '_matcher'.
 if [ -n "${MATCHER:+1}" ]; then
   if [ -f "$MATCHER" ]; then
     source $MATCHER
@@ -260,10 +261,7 @@ if [ -n "${MATCHER:+1}" ]; then
   fi
 fi
 
-test -f "${TESTDIR}/test_matcher" && { source $"${TESTDIR}/test_matcher"; }
-test -f "${TESTDIR}/iot_matcher"  && { source "${TESTDIR}/iot_matcher"; }
-
-for mfile in $(ls *_matcher *.matcher 2>/dev/null); do
+for mfile in $(ls ${TESTDIR}/*_matcher ${TESTDIR}/*.matcher 2>/dev/null); do
   source $mfile
 done
 
@@ -441,7 +439,7 @@ failing_output() {
   elif ! $out && $err; then
     pwarn "stderr:\n" >> $immediate_results
     cat $err_file >> $immediate_results
-  elif $out && $err; then
+  else
     pwarn "stdout:\n" >> $immediate_results
     cat $out_file >> $immediate_results
     pwarn "stderr:\n" >> $immediate_results
@@ -458,7 +456,7 @@ failing_unified() {
   elif ! $out && $err; then
     pwarn "stderr:\n" >> $immediate_results
     diff -u $expect_err $actual_err >> $immediate_results
-  elif $out && $err; then
+  else
     pwarn "stdout:\n" >> $immediate_results
     diff -u $expect_out $actual_out >> $immediate_results
     pwarn "stderr:\n" >> $immediate_results
@@ -477,14 +475,16 @@ failing_case() {
 
   pfail "\n${failcount}) $(basename ${suite})/${testname}\n" >> $immediate_results
 
-  if $unified; then
-     failing_unified
-   else
-    pwarn "${BOLD}Expected:\n" >> $immediate_results
-    failing_output $expect_out $expect_err
+  if $out || $err; then
+    if $unified; then
+      failing_unified
+    else
+      pwarn "${BOLD}Expected:\n" >> $immediate_results
+      failing_output $expect_out $expect_err
 
-    pwarn "${BOLD}Received:\n" >> $immediate_results
-    failing_output $actual_out $actual_err
+      pwarn "${BOLD}Received:\n" >> $immediate_results
+      failing_output $actual_out $actual_err
+    fi
   fi
 
   cat $immediate_results >> $results
